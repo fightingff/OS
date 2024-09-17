@@ -1,16 +1,25 @@
     .extern start_kernel
-    .section .text.entry
+    .section .text.init
     .globl _start
 _start:
-    #error Unimplemented
     # ------------------
     # - your code here -
     # ------------------
 
+    la sp, boot_stack_top   # set the stack pointer
+
+    # set stvec = _traps
+    
+    # set sie[STIE] = 1
+    # set first time interrupt
+    # set sstatus[SIE] = 1
+
+    call start_kernel
+
     .section .bss.stack
     .globl boot_stack
 boot_stack:
-    .space XYZ # <-- change to your stack size
+    .space 4096 # <-- change to your stack size
 
     .globl boot_stack_top
 boot_stack_top:
