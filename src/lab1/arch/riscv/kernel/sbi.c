@@ -38,20 +38,14 @@ struct sbiret sbi_set_timer(uint64_t stime_value) {
     return sbi_ecall(0x54494D45, 0, stime_value, 0, 0, 0, 0, 0);
 }
 
-struct sbiret sbi_debug_console_read() {
-    return sbi_ecall(0x4442434e, 1, 0, 0, 0, 0, 0, 0);
+struct sbiret sbi_debug_console_read(unsigned long num_bytes,
+                                     unsigned long base_addr_lo,
+                                     unsigned long base_addr_hi){
+    return sbi_ecall(0x4442434e, 1, num_bytes, base_addr_lo, base_addr_hi, 0, 0, 0);
 }
 
-struct sbiret sbi_debug_console_write(const char *str) {
-    // 逐字节写入
-    // struct sbiret ret;
-    // while(*str) {
-    //     ret = sbi_debug_console_write_byte(*str);
-    //     if(ret.error) return ret;
-    //     str++;
-    // }
-    // return ret;
-
-    // 一次性写入
-    return sbi_ecall(0x4442434e, 0, (uint64_t)str, 0, 0, 0, 0, 0);
+struct sbiret sbi_debug_console_write(unsigned long num_bytes,
+                                      unsigned long base_addr_lo,
+                                      unsigned long base_addr_hi){
+    return sbi_ecall(0x4442434e, 0, num_bytes, base_addr_lo, base_addr_hi, 0, 0, 0);
 }
