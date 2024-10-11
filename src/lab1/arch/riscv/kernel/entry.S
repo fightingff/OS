@@ -3,7 +3,7 @@
     .align 2
     .globl _traps 
 _traps:
-    addi sp, sp, -256   # allocate 256 bytes stack space
+    addi sp, sp, -264   # allocate 256 bytes stack space
     sd x0, 0(sp)
     sd x1, 8(sp)
     sd x2, 16(sp)
@@ -81,7 +81,7 @@ _traps:
     ld x2, 16(sp)
     ld x1, 8(sp)
     ld x0, 0(sp)
-    addi sp, sp, 256    # restore stack pointer
+    addi sp, sp, 264    # restore stack pointer
     # 3. restore sepc and 32 registers (x2(sp) should be restore last) from stack
 
     sret    
