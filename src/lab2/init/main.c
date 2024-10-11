@@ -1,7 +1,9 @@
 #include "printk.h"
 #include "defs.h"
+#include "proc.h"
 
 extern void test();
+extern void run_idle();
 
 int start_kernel() {
     printk("2024");
@@ -19,6 +21,6 @@ int start_kernel() {
     // x = csr_read(sscratch);
     // printk("written: sscratch = 0x%lx\n", x);   // print written value
 
-    test();
+    run_idle();
     return 0;
 }

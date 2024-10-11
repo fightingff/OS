@@ -2,6 +2,7 @@
 #include "trap.h"
 #include "printk.h"
 #include "clock.h"
+#include "proc.h"
 
 void trap_handler(uint64_t scause, uint64_t sepc) {
     // 通过 `scause` 判断 trap 类型
@@ -13,7 +14,9 @@ void trap_handler(uint64_t scause, uint64_t sepc) {
         // Supervisor software interrupt from a S-mode timer interrupt
         // 时钟中断
         // 打印输出相关信息
-        printk("[S] Supervisor Mode Timer Interrupt\n");
+        // printk("[S] Supervisor Mode Timer Interrupt\n");
+        do_timer();
+
         // 设置下一次时钟中断
         clock_set_next_event();
     }else{

@@ -16,3 +16,9 @@ void test() {
         }
     }
 }
+
+void run_idle() {
+    while (1) {
+        // do nothing
+    }
+}
