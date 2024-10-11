@@ -1,6 +1,7 @@
     .extern start_kernel
     .extern clock_set_next_event
     .extern _traps
+    .extern mm_init
     .section .text.init
     .globl _start
 _start:
@@ -9,6 +10,8 @@ _start:
     # ------------------
 
     la sp, boot_stack_top   # set the stack pointer
+
+    call mm_init
 
     la t0, _traps
     csrw stvec, t0  # set stvec = _traps
