@@ -97,9 +97,10 @@ extern void __switch_to(struct task_struct *prev, struct task_struct *next);
 
 void switch_to(struct task_struct *next) {
     if(current->pid != next->pid) {
-        __switch_to(current, next);
+        struct task_struct *prev = current;
         current = next;
-        printk("switch to [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", current->pid, current->priority, current->counter);
+        printk("\nswitch to [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", current->pid, current->priority, current->counter);
+        __switch_to(prev, next);
     }
 }
 
@@ -109,9 +110,7 @@ void do_timer() {
     if(current->pid == idle->pid || current->counter == 0) {
         schedule();
     }
-    else if(--(current->counter) == 0) {
-        schedule();
-    }
+    else --(current->counter);
 }
 
 void schedule() {
@@ -128,11 +127,11 @@ void schedule() {
     }
 
     if(next->counter == 0) {
+        printk("\n");
         for(int i = 1; i < NR_TASKS; ++i) {
             task[i]->counter = task[i]->priority;
             printk("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
         }
-        printk("\n");
         return (void)(schedule());
     }
 
