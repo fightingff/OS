@@ -62,6 +62,7 @@ char expected_output[] = "2222222222111111133334222222222211111113";
 #endif
 
 void dummy() {
+    LOG(RED);
     uint64_t MOD = 1000000007;
     uint64_t auto_inc_local_var = 0;
     int last_counter = -1;
@@ -73,6 +74,7 @@ void dummy() {
             last_counter = current->counter;
             auto_inc_local_var = (auto_inc_local_var + 1) % MOD;
             printk("[PID = %d] is running. auto_inc_local_var = %d\n", current->pid, auto_inc_local_var);
+            LOG(RED "%llu\n", current->thread.ra);
             #if TEST_SCHED
             tasks_output[tasks_output_index++] = current->pid + '0';
             if (tasks_output_index == MAX_OUTPUT) {
@@ -96,6 +98,8 @@ void dummy() {
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
 
 void switch_to(struct task_struct *next) {
+    LOG(RED);
+    LOG("current->pid = %llu, next->pid = %llu\n", current->pid, next->pid);
     if(current->pid != next->pid) {
         struct task_struct *prev = current;
         current = next;
@@ -105,6 +109,7 @@ void switch_to(struct task_struct *next) {
 }
 
 void do_timer() {
+    LOG(RED);
     // 1. 如果当前线程是 idle 线程或当前线程时间片耗尽则直接进行调度
     // 2. 否则对当前线程的运行剩余时间减 1，若剩余时间仍然大于 0 则直接返回，否则进行调度
     if(current->pid == idle->pid || current->counter == 0) {
@@ -119,6 +124,7 @@ void schedule() {
     //    设置完后需要重新进行调度
     // 3. 最后通过 switch_to 切换到下一个线程
 
+    LOG(RED);
     struct task_struct *next = idle;
     for(int i = 1; i < NR_TASKS; ++i) {
         if(task[i]->counter > next->counter){
@@ -132,8 +138,8 @@ void schedule() {
             task[i]->counter = task[i]->priority;
             printk("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
         }
-        return (void)(schedule());
+        schedule();
+    } else {
+        switch_to(next);
     }
-
-    switch_to(next);
 }

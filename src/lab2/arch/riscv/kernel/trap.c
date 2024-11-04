@@ -14,11 +14,13 @@ void trap_handler(uint64_t scause, uint64_t sepc) {
         // Supervisor software interrupt from a S-mode timer interrupt
         // 时钟中断
         // 打印输出相关信息
-        // printk("[S] Supervisor Mode Timer Interrupt\n");
-        do_timer();
+        // printk("[S] Supervisor Mde Timer Interrupt\n");
 
         // 设置下一次时钟中断
         clock_set_next_event();
+
+        // schedule
+        do_timer();
     }else{
         // 其他 interrupt / exception
         // 打印出来供以后调试
