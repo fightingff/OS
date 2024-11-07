@@ -5,7 +5,7 @@ LD=${CROSS_}ld
 OBJCOPY=${CROSS_}objcopy
 OBJDUMP=${CROSS_}objdump
 
-ISA=rv64imafd
+ISA=rv64imafdzifencei
 ABI=lp64
 
 INCLUDE = -I $(shell pwd)/include -I $(shell pwd)/arch/riscv/include

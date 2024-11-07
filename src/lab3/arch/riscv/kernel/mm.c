@@ -37,7 +37,7 @@ void kfree(void *addr) {
 }
 
 void kfreerange(char *start, char *end) {
-    LOG(RED "kfreerange(start: %p, end: %p)" CLEAR, start, end);
+    // LOG(RED "kfreerange(start: %p, end: %p)" CLEAR, start, end);
     char *addr = (char *)PGROUNDUP((uintptr_t)start);
     for (; (uintptr_t)(addr) + PGSIZE <= (uintptr_t)end; addr += PGSIZE) { // ? 这里改成 < 了
         kfree((void *)addr);
@@ -46,6 +46,6 @@ void kfreerange(char *start, char *end) {
 
 void mm_init(void) {
     printk("mm_init start...\n");
-    kfreerange(_ekernel, (char *)(PHY_END + PA2VA_OFFSET));
+    kfreerange(_ekernel, (char *)VM_END);
     printk("...mm_init done!\n");
 }
