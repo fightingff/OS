@@ -34,12 +34,10 @@ void setup_vm() {
 
     memset(early_pgtbl, 0x00, sizeof early_pgtbl);
 
-    /*
     for(uint64_t i = 0; i < (1 << 9); i++) {
-        uint64_t virtual_page_number = (i << 18); // 大页的开头的第一个小页页号
         uint64_t physical_page_number = 0;
-        if(virtual_page_number == (PHY_START >> 12) || virtual_page_number == (VM_START >> 12)) {
-            LOG(RED "%lx\n", (PHY_START >> 12));
+        if(i == ((PHY_START >> 30) & 0x1FF) || i == ((VM_START >> 30) & 0x1FF)) {
+            LOG(RED "%lx\n" CLEAR, (PHY_START >> 12));
             physical_page_number = (PHY_START >> 12);
         }
         
@@ -48,18 +46,18 @@ void setup_vm() {
         // V | R | W | X 设置为 1
         early_pgtbl[i] |= ((1 << 4) - 1);
     }
-    */
-
-    // 等值映射
-    uint64_t index = (PHY_START >> 30) & 0x1ff;
-    early_pgtbl[index] = (PHY_START >> 12) << 10;
-    early_pgtbl[index] |= ((1 << 4) - 1);
 
 
-    // 二次映射
-    index = (VM_START >> 30) & 0x1ff;
-    early_pgtbl[index] = (PHY_START >> 12) << 10;
-    early_pgtbl[index] |= ((1 << 4) - 1);
+    // // 等值映射
+    // uint64_t index = (PHY_START >> 30) & 0x1ff;
+    // early_pgtbl[index] = (PHY_START >> 12) << 10;
+    // early_pgtbl[index] |= ((1 << 4) - 1);
+
+
+    // // 二次映射
+    // index = (VM_START >> 30) & 0x1ff;
+    // early_pgtbl[index] = (PHY_START >> 12) << 10;
+    // early_pgtbl[index] |= ((1 << 4) - 1);
 
     printk("...setup_vm done!\n");
 }
