@@ -22,7 +22,7 @@ void *kalloc() {
 void kfree(void *addr) {
     struct run *r;
 
-    LOG(RED "kfree(addr: %p)\n" CLEAR, addr);
+    LOG(RED "kfree(addr: %p)" CLEAR, addr);
 
     // PGSIZE align 
     *(uintptr_t *)&addr = (uintptr_t)addr & ~(PGSIZE - 1);
@@ -37,9 +37,9 @@ void kfree(void *addr) {
 }
 
 void kfreerange(char *start, char *end) {
-    LOG(RED "kfreerange(start: %p, end: %p)\n" CLEAR, start, end);
+    LOG(RED "kfreerange(start: %p, end: %p)" CLEAR, start, end);
     char *addr = (char *)PGROUNDUP((uintptr_t)start);
-    for (; (uintptr_t)(addr) + PGSIZE <= (uintptr_t)end; addr += PGSIZE) {
+    for (; (uintptr_t)(addr) + PGSIZE < (uintptr_t)end; addr += PGSIZE) { // ? 这里改成 < 了
         kfree((void *)addr);
     }
 }

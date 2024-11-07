@@ -448,7 +448,7 @@ ffffffe000200308:	03010413          	addi	s0,sp,48
 ffffffe00020030c:	fca43c23          	sd	a0,-40(s0)
     struct run *r;
 
-    LOG(RED "kfree(addr: %p)\n" CLEAR, addr);
+    LOG(RED "kfree(addr: %p)" CLEAR, addr);
 ffffffe000200310:	fd843783          	ld	a5,-40(s0)
 ffffffe000200314:	00078713          	mv	a4,a5
 ffffffe000200318:	00003697          	auipc	a3,0x3
@@ -508,16 +508,16 @@ ffffffe0002003ac:	02813023          	sd	s0,32(sp)
 ffffffe0002003b0:	03010413          	addi	s0,sp,48
 ffffffe0002003b4:	fca43c23          	sd	a0,-40(s0)
 ffffffe0002003b8:	fcb43823          	sd	a1,-48(s0)
-    LOG(RED "kfreerange(start: %p, end: %p)\n" CLEAR, start, end);
+    LOG(RED "kfreerange(start: %p, end: %p)" CLEAR, start, end);
 ffffffe0002003bc:	fd043783          	ld	a5,-48(s0)
 ffffffe0002003c0:	fd843703          	ld	a4,-40(s0)
 ffffffe0002003c4:	00003697          	auipc	a3,0x3
-ffffffe0002003c8:	cfc68693          	addi	a3,a3,-772 # ffffffe0002030c0 <__func__.0>
+ffffffe0002003c8:	cf468693          	addi	a3,a3,-780 # ffffffe0002030b8 <__func__.0>
 ffffffe0002003cc:	02800613          	li	a2,40
 ffffffe0002003d0:	00003597          	auipc	a1,0x3
 ffffffe0002003d4:	c4058593          	addi	a1,a1,-960 # ffffffe000203010 <__func__.3+0x8>
 ffffffe0002003d8:	00003517          	auipc	a0,0x3
-ffffffe0002003dc:	c7850513          	addi	a0,a0,-904 # ffffffe000203050 <__func__.3+0x48>
+ffffffe0002003dc:	c7050513          	addi	a0,a0,-912 # ffffffe000203048 <__func__.3+0x40>
 ffffffe0002003e0:	3dd010ef          	jal	ffffffe000201fbc <printk>
     char *addr = (char *)PGROUNDUP((uintptr_t)start);
 ffffffe0002003e4:	fd843703          	ld	a4,-40(s0)
@@ -527,12 +527,12 @@ ffffffe0002003f0:	00f70733          	add	a4,a4,a5
 ffffffe0002003f4:	fffff7b7          	lui	a5,0xfffff
 ffffffe0002003f8:	00f777b3          	and	a5,a4,a5
 ffffffe0002003fc:	fef43423          	sd	a5,-24(s0)
-    for (; (uintptr_t)(addr) + PGSIZE <= (uintptr_t)end; addr += PGSIZE) {
+    for (; (uintptr_t)(addr) + PGSIZE < (uintptr_t)end; addr += PGSIZE) { // ? 这里改成 < 了
 ffffffe000200400:	01c0006f          	j	ffffffe00020041c <kfreerange+0x78>
         kfree((void *)addr);
 ffffffe000200404:	fe843503          	ld	a0,-24(s0)
 ffffffe000200408:	ef5ff0ef          	jal	ffffffe0002002fc <kfree>
-    for (; (uintptr_t)(addr) + PGSIZE <= (uintptr_t)end; addr += PGSIZE) {
+    for (; (uintptr_t)(addr) + PGSIZE < (uintptr_t)end; addr += PGSIZE) { // ? 这里改成 < 了
 ffffffe00020040c:	fe843703          	ld	a4,-24(s0)
 ffffffe000200410:	000017b7          	lui	a5,0x1
 ffffffe000200414:	00f707b3          	add	a5,a4,a5
@@ -541,7 +541,7 @@ ffffffe00020041c:	fe843703          	ld	a4,-24(s0)
 ffffffe000200420:	000017b7          	lui	a5,0x1
 ffffffe000200424:	00f70733          	add	a4,a4,a5
 ffffffe000200428:	fd043783          	ld	a5,-48(s0)
-ffffffe00020042c:	fce7fce3          	bgeu	a5,a4,ffffffe000200404 <kfreerange+0x60>
+ffffffe00020042c:	fcf76ce3          	bltu	a4,a5,ffffffe000200404 <kfreerange+0x60>
     }
 }
 ffffffe000200430:	00000013          	nop
@@ -560,7 +560,7 @@ ffffffe000200450:	00813023          	sd	s0,0(sp)
 ffffffe000200454:	01010413          	addi	s0,sp,16
     printk("mm_init start...\n");
 ffffffe000200458:	00003517          	auipc	a0,0x3
-ffffffe00020045c:	c3850513          	addi	a0,a0,-968 # ffffffe000203090 <__func__.3+0x88>
+ffffffe00020045c:	c3050513          	addi	a0,a0,-976 # ffffffe000203088 <__func__.3+0x80>
 ffffffe000200460:	35d010ef          	jal	ffffffe000201fbc <printk>
     kfreerange(_ekernel, (char *)(VM_START + 0x8000000));
 ffffffe000200464:	c0100793          	li	a5,-1023
@@ -570,7 +570,7 @@ ffffffe000200470:	b9450513          	addi	a0,a0,-1132 # ffffffe000208000 <_ebss>
 ffffffe000200474:	f31ff0ef          	jal	ffffffe0002003a4 <kfreerange>
     printk("...mm_init done!\n");
 ffffffe000200478:	00003517          	auipc	a0,0x3
-ffffffe00020047c:	c3050513          	addi	a0,a0,-976 # ffffffe0002030a8 <__func__.3+0xa0>
+ffffffe00020047c:	c2850513          	addi	a0,a0,-984 # ffffffe0002030a0 <__func__.3+0x98>
 ffffffe000200480:	33d010ef          	jal	ffffffe000201fbc <printk>
 }
 ffffffe000200484:	00000013          	nop
@@ -743,7 +743,7 @@ ffffffe000200678:	ece7d6e3          	bge	a5,a4,ffffffe000200544 <task_init+0xac>
     }
     printk("...task_init done!\n");
 ffffffe00020067c:	00003517          	auipc	a0,0x3
-ffffffe000200680:	a5450513          	addi	a0,a0,-1452 # ffffffe0002030d0 <__func__.0+0x10>
+ffffffe000200680:	a4c50513          	addi	a0,a0,-1460 # ffffffe0002030c8 <__func__.0+0x10>
 ffffffe000200684:	139010ef          	jal	ffffffe000201fbc <printk>
 }
 ffffffe000200688:	00000013          	nop
@@ -768,9 +768,9 @@ ffffffe0002006ac:	00003697          	auipc	a3,0x3
 ffffffe0002006b0:	95c68693          	addi	a3,a3,-1700 # ffffffe000203008 <__func__.3>
 ffffffe0002006b4:	04100613          	li	a2,65
 ffffffe0002006b8:	00003597          	auipc	a1,0x3
-ffffffe0002006bc:	a3058593          	addi	a1,a1,-1488 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe0002006bc:	a2858593          	addi	a1,a1,-1496 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe0002006c0:	00003517          	auipc	a0,0x3
-ffffffe0002006c4:	a3050513          	addi	a0,a0,-1488 # ffffffe0002030f0 <__func__.0+0x30>
+ffffffe0002006c4:	a2850513          	addi	a0,a0,-1496 # ffffffe0002030e8 <__func__.0+0x30>
 ffffffe0002006c8:	0f5010ef          	jal	ffffffe000201fbc <printk>
     uint64_t MOD = 1000000007;
 ffffffe0002006cc:	3b9ad7b7          	lui	a5,0x3b9ad
@@ -833,7 +833,7 @@ ffffffe000200784:	0187b783          	ld	a5,24(a5)
 ffffffe000200788:	fe843603          	ld	a2,-24(s0)
 ffffffe00020078c:	00078593          	mv	a1,a5
 ffffffe000200790:	00003517          	auipc	a0,0x3
-ffffffe000200794:	98050513          	addi	a0,a0,-1664 # ffffffe000203110 <__func__.0+0x50>
+ffffffe000200794:	97850513          	addi	a0,a0,-1672 # ffffffe000203108 <__func__.0+0x50>
 ffffffe000200798:	025010ef          	jal	ffffffe000201fbc <printk>
             LOG(RED "%llu\n", current->thread.ra);
 ffffffe00020079c:	00006797          	auipc	a5,0x6
@@ -845,9 +845,9 @@ ffffffe0002007b0:	00003697          	auipc	a3,0x3
 ffffffe0002007b4:	85868693          	addi	a3,a3,-1960 # ffffffe000203008 <__func__.3>
 ffffffe0002007b8:	04d00613          	li	a2,77
 ffffffe0002007bc:	00003597          	auipc	a1,0x3
-ffffffe0002007c0:	92c58593          	addi	a1,a1,-1748 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe0002007c0:	92458593          	addi	a1,a1,-1756 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe0002007c4:	00003517          	auipc	a0,0x3
-ffffffe0002007c8:	97c50513          	addi	a0,a0,-1668 # ffffffe000203140 <__func__.0+0x80>
+ffffffe0002007c8:	97450513          	addi	a0,a0,-1676 # ffffffe000203138 <__func__.0+0x80>
 ffffffe0002007cc:	7f0010ef          	jal	ffffffe000201fbc <printk>
         if ((last_counter == -1 || current->counter != last_counter) && current->counter > 0) {
 ffffffe0002007d0:	f15ff06f          	j	ffffffe0002006e4 <dummy+0x48>
@@ -866,12 +866,12 @@ ffffffe0002007e0:	03010413          	addi	s0,sp,48
 ffffffe0002007e4:	fca43c23          	sd	a0,-40(s0)
     LOG(RED);
 ffffffe0002007e8:	00003697          	auipc	a3,0x3
-ffffffe0002007ec:	a3868693          	addi	a3,a3,-1480 # ffffffe000203220 <__func__.2>
+ffffffe0002007ec:	a3068693          	addi	a3,a3,-1488 # ffffffe000203218 <__func__.2>
 ffffffe0002007f0:	06500613          	li	a2,101
 ffffffe0002007f4:	00003597          	auipc	a1,0x3
-ffffffe0002007f8:	8f458593          	addi	a1,a1,-1804 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe0002007f8:	8ec58593          	addi	a1,a1,-1812 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe0002007fc:	00003517          	auipc	a0,0x3
-ffffffe000200800:	8f450513          	addi	a0,a0,-1804 # ffffffe0002030f0 <__func__.0+0x30>
+ffffffe000200800:	8ec50513          	addi	a0,a0,-1812 # ffffffe0002030e8 <__func__.0+0x30>
 ffffffe000200804:	7b8010ef          	jal	ffffffe000201fbc <printk>
     LOG("current->pid = %llu, next->pid = %llu\n", current->pid, next->pid);
 ffffffe000200808:	00006797          	auipc	a5,0x6
@@ -881,12 +881,12 @@ ffffffe000200814:	0187b703          	ld	a4,24(a5)
 ffffffe000200818:	fd843783          	ld	a5,-40(s0)
 ffffffe00020081c:	0187b783          	ld	a5,24(a5)
 ffffffe000200820:	00003697          	auipc	a3,0x3
-ffffffe000200824:	a0068693          	addi	a3,a3,-1536 # ffffffe000203220 <__func__.2>
+ffffffe000200824:	9f868693          	addi	a3,a3,-1544 # ffffffe000203218 <__func__.2>
 ffffffe000200828:	06600613          	li	a2,102
 ffffffe00020082c:	00003597          	auipc	a1,0x3
-ffffffe000200830:	8bc58593          	addi	a1,a1,-1860 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe000200830:	8b458593          	addi	a1,a1,-1868 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe000200834:	00003517          	auipc	a0,0x3
-ffffffe000200838:	93450513          	addi	a0,a0,-1740 # ffffffe000203168 <__func__.0+0xa8>
+ffffffe000200838:	92c50513          	addi	a0,a0,-1748 # ffffffe000203160 <__func__.0+0xa8>
 ffffffe00020083c:	780010ef          	jal	ffffffe000201fbc <printk>
     if(current->pid != next->pid) {
 ffffffe000200840:	00005797          	auipc	a5,0x5
@@ -922,7 +922,7 @@ ffffffe0002008a8:	0087b783          	ld	a5,8(a5)
 ffffffe0002008ac:	00078693          	mv	a3,a5
 ffffffe0002008b0:	00070593          	mv	a1,a4
 ffffffe0002008b4:	00003517          	auipc	a0,0x3
-ffffffe0002008b8:	8f450513          	addi	a0,a0,-1804 # ffffffe0002031a8 <__func__.0+0xe8>
+ffffffe0002008b8:	8ec50513          	addi	a0,a0,-1812 # ffffffe0002031a0 <__func__.0+0xe8>
 ffffffe0002008bc:	700010ef          	jal	ffffffe000201fbc <printk>
         __switch_to(prev, next);
 ffffffe0002008c0:	fd843583          	ld	a1,-40(s0)
@@ -945,12 +945,12 @@ ffffffe0002008e8:	00813023          	sd	s0,0(sp)
 ffffffe0002008ec:	01010413          	addi	s0,sp,16
     LOG(RED);
 ffffffe0002008f0:	00003697          	auipc	a3,0x3
-ffffffe0002008f4:	94068693          	addi	a3,a3,-1728 # ffffffe000203230 <__func__.1>
+ffffffe0002008f4:	93868693          	addi	a3,a3,-1736 # ffffffe000203228 <__func__.1>
 ffffffe0002008f8:	07000613          	li	a2,112
 ffffffe0002008fc:	00002597          	auipc	a1,0x2
-ffffffe000200900:	7ec58593          	addi	a1,a1,2028 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe000200900:	7e458593          	addi	a1,a1,2020 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe000200904:	00002517          	auipc	a0,0x2
-ffffffe000200908:	7ec50513          	addi	a0,a0,2028 # ffffffe0002030f0 <__func__.0+0x30>
+ffffffe000200908:	7e450513          	addi	a0,a0,2020 # ffffffe0002030e8 <__func__.0+0x30>
 ffffffe00020090c:	6b0010ef          	jal	ffffffe000201fbc <printk>
     // 1. 如果当前线程是 idle 线程或当前线程时间片耗尽则直接进行调度
     // 2. 否则对当前线程的运行剩余时间减 1，若剩余时间仍然大于 0 则直接返回，否则进行调度
@@ -1002,12 +1002,12 @@ ffffffe00020098c:	02010413          	addi	s0,sp,32
 
     LOG(RED);
 ffffffe000200990:	00003697          	auipc	a3,0x3
-ffffffe000200994:	8b068693          	addi	a3,a3,-1872 # ffffffe000203240 <__func__.0>
+ffffffe000200994:	8a868693          	addi	a3,a3,-1880 # ffffffe000203238 <__func__.0>
 ffffffe000200998:	07f00613          	li	a2,127
 ffffffe00020099c:	00002597          	auipc	a1,0x2
-ffffffe0002009a0:	74c58593          	addi	a1,a1,1868 # ffffffe0002030e8 <__func__.0+0x28>
+ffffffe0002009a0:	74458593          	addi	a1,a1,1860 # ffffffe0002030e0 <__func__.0+0x28>
 ffffffe0002009a4:	00002517          	auipc	a0,0x2
-ffffffe0002009a8:	74c50513          	addi	a0,a0,1868 # ffffffe0002030f0 <__func__.0+0x30>
+ffffffe0002009a8:	74450513          	addi	a0,a0,1860 # ffffffe0002030e8 <__func__.0+0x30>
 ffffffe0002009ac:	610010ef          	jal	ffffffe000201fbc <printk>
     struct task_struct *next = idle;
 ffffffe0002009b0:	00005797          	auipc	a5,0x5
@@ -1054,7 +1054,7 @@ ffffffe000200a30:	0087b783          	ld	a5,8(a5)
 ffffffe000200a34:	0c079e63          	bnez	a5,ffffffe000200b10 <schedule+0x190>
         printk("\n");
 ffffffe000200a38:	00002517          	auipc	a0,0x2
-ffffffe000200a3c:	7a850513          	addi	a0,a0,1960 # ffffffe0002031e0 <__func__.0+0x120>
+ffffffe000200a3c:	7a050513          	addi	a0,a0,1952 # ffffffe0002031d8 <__func__.0+0x120>
 ffffffe000200a40:	57c010ef          	jal	ffffffe000201fbc <printk>
         for(int i = 1; i < NR_TASKS; ++i) {
 ffffffe000200a44:	00100793          	li	a5,1
@@ -1099,7 +1099,7 @@ ffffffe000200ad4:	0007b783          	ld	a5,0(a5)
 ffffffe000200ad8:	0087b783          	ld	a5,8(a5)
 ffffffe000200adc:	00078693          	mv	a3,a5
 ffffffe000200ae0:	00002517          	auipc	a0,0x2
-ffffffe000200ae4:	70850513          	addi	a0,a0,1800 # ffffffe0002031e8 <__func__.0+0x128>
+ffffffe000200ae4:	70050513          	addi	a0,a0,1792 # ffffffe0002031e0 <__func__.0+0x128>
 ffffffe000200ae8:	4d4010ef          	jal	ffffffe000201fbc <printk>
         for(int i = 1; i < NR_TASKS; ++i) {
 ffffffe000200aec:	fe042783          	lw	a5,-32(s0)
@@ -1456,7 +1456,7 @@ ffffffe000200f18:	01c0006f          	j	ffffffe000200f34 <trap_handler+0x54>
 ffffffe000200f1c:	fe043603          	ld	a2,-32(s0)
 ffffffe000200f20:	fe843583          	ld	a1,-24(s0)
 ffffffe000200f24:	00002517          	auipc	a0,0x2
-ffffffe000200f28:	32c50513          	addi	a0,a0,812 # ffffffe000203250 <__func__.0+0x10>
+ffffffe000200f28:	32450513          	addi	a0,a0,804 # ffffffe000203248 <__func__.0+0x10>
 ffffffe000200f2c:	090010ef          	jal	ffffffe000201fbc <printk>
     }
 ffffffe000200f30:	00000013          	nop
@@ -1504,12 +1504,12 @@ ffffffe000200f8c:	02f71863          	bne	a4,a5,ffffffe000200fbc <setup_vm+0x74>
             LOG(RED "%lx\n" CLEAR, (PHY_START >> 12));
 ffffffe000200f90:	00080737          	lui	a4,0x80
 ffffffe000200f94:	00002697          	auipc	a3,0x2
-ffffffe000200f98:	34468693          	addi	a3,a3,836 # ffffffe0002032d8 <__func__.0>
+ffffffe000200f98:	33c68693          	addi	a3,a3,828 # ffffffe0002032d0 <__func__.0>
 ffffffe000200f9c:	02800613          	li	a2,40
 ffffffe000200fa0:	00002597          	auipc	a1,0x2
-ffffffe000200fa4:	2f058593          	addi	a1,a1,752 # ffffffe000203290 <__func__.0+0x50>
+ffffffe000200fa4:	2e858593          	addi	a1,a1,744 # ffffffe000203288 <__func__.0+0x50>
 ffffffe000200fa8:	00002517          	auipc	a0,0x2
-ffffffe000200fac:	2f050513          	addi	a0,a0,752 # ffffffe000203298 <__func__.0+0x58>
+ffffffe000200fac:	2e850513          	addi	a0,a0,744 # ffffffe000203290 <__func__.0+0x58>
 ffffffe000200fb0:	00c010ef          	jal	ffffffe000201fbc <printk>
             physical_page_number = (PHY_START >> 12);
 ffffffe000200fb4:	000807b7          	lui	a5,0x80
@@ -1562,7 +1562,7 @@ ffffffe000201040:	f2e7fae3          	bgeu	a5,a4,ffffffe000200f74 <setup_vm+0x2c>
 
     printk("...setup_vm done!\n");
 ffffffe000201044:	00002517          	auipc	a0,0x2
-ffffffe000201048:	27c50513          	addi	a0,a0,636 # ffffffe0002032c0 <__func__.0+0x80>
+ffffffe000201048:	27450513          	addi	a0,a0,628 # ffffffe0002032b8 <__func__.0+0x80>
 ffffffe00020104c:	771000ef          	jal	ffffffe000201fbc <printk>
 ffffffe000201050:	00000013          	nop
 ffffffe000201054:	01813083          	ld	ra,24(sp)
@@ -1583,11 +1583,11 @@ ffffffe00020106c:	00813023          	sd	s0,0(sp)
 ffffffe000201070:	01010413          	addi	s0,sp,16
     printk("2024");
 ffffffe000201074:	00002517          	auipc	a0,0x2
-ffffffe000201078:	27450513          	addi	a0,a0,628 # ffffffe0002032e8 <__func__.0+0x10>
+ffffffe000201078:	26c50513          	addi	a0,a0,620 # ffffffe0002032e0 <__func__.0+0x10>
 ffffffe00020107c:	741000ef          	jal	ffffffe000201fbc <printk>
     printk(" ZJU Operating System\n");
 ffffffe000201080:	00002517          	auipc	a0,0x2
-ffffffe000201084:	27050513          	addi	a0,a0,624 # ffffffe0002032f0 <__func__.0+0x18>
+ffffffe000201084:	26850513          	addi	a0,a0,616 # ffffffe0002032e8 <__func__.0+0x18>
 ffffffe000201088:	735000ef          	jal	ffffffe000201fbc <printk>
     // x = 0x12345678;
     // csr_write(sscratch, x);
@@ -1645,7 +1645,7 @@ ffffffe0002010fc:	fc079ee3          	bnez	a5,ffffffe0002010d8 <test+0x14>
             // display a message every 100000000 loops, in my machine, it takes about 1/3 second
             printk("kernel is running!\n");
 ffffffe000201100:	00002517          	auipc	a0,0x2
-ffffffe000201104:	20850513          	addi	a0,a0,520 # ffffffe000203308 <__func__.0+0x30>
+ffffffe000201104:	20050513          	addi	a0,a0,512 # ffffffe000203300 <__func__.0+0x30>
 ffffffe000201108:	6b5000ef          	jal	ffffffe000201fbc <printk>
             i = 0;
 ffffffe00020110c:	fe042623          	sw	zero,-20(s0)
@@ -1960,7 +1960,7 @@ ffffffe000201454:	fd043783          	ld	a5,-48(s0)
 ffffffe000201458:	00079863          	bnez	a5,ffffffe000201468 <puts_wo_nl+0x2c>
         s = "(null)";
 ffffffe00020145c:	00002797          	auipc	a5,0x2
-ffffffe000201460:	ec478793          	addi	a5,a5,-316 # ffffffe000203320 <__func__.0+0x48>
+ffffffe000201460:	ebc78793          	addi	a5,a5,-324 # ffffffe000203318 <__func__.0+0x48>
 ffffffe000201464:	fcf43823          	sd	a5,-48(s0)
     }
     const char *p = s;
@@ -2017,7 +2017,7 @@ ffffffe000201500:	00f71e63          	bne	a4,a5,ffffffe00020151c <print_dec_int+0
         // special case for 0x8000000000000000
         return puts_wo_nl(putch, "-9223372036854775808");
 ffffffe000201504:	00002597          	auipc	a1,0x2
-ffffffe000201508:	e2458593          	addi	a1,a1,-476 # ffffffe000203328 <__func__.0+0x50>
+ffffffe000201508:	e1c58593          	addi	a1,a1,-484 # ffffffe000203320 <__func__.0+0x50>
 ffffffe00020150c:	fa843503          	ld	a0,-88(s0)
 ffffffe000201510:	f2dff0ef          	jal	ffffffe00020143c <puts_wo_nl>
 ffffffe000201514:	00050793          	mv	a5,a0
@@ -2512,10 +2512,10 @@ ffffffe000201b0c:	00078713          	mv	a4,a5
 ffffffe000201b10:	05800793          	li	a5,88
 ffffffe000201b14:	00f71863          	bne	a4,a5,ffffffe000201b24 <vprintfmt+0x358>
 ffffffe000201b18:	00002797          	auipc	a5,0x2
-ffffffe000201b1c:	82878793          	addi	a5,a5,-2008 # ffffffe000203340 <upperxdigits.1>
+ffffffe000201b1c:	82078793          	addi	a5,a5,-2016 # ffffffe000203338 <upperxdigits.1>
 ffffffe000201b20:	00c0006f          	j	ffffffe000201b2c <vprintfmt+0x360>
 ffffffe000201b24:	00002797          	auipc	a5,0x2
-ffffffe000201b28:	83478793          	addi	a5,a5,-1996 # ffffffe000203358 <lowerxdigits.0>
+ffffffe000201b28:	82c78793          	addi	a5,a5,-2004 # ffffffe000203350 <lowerxdigits.0>
 ffffffe000201b2c:	f8f43c23          	sd	a5,-104(s0)
                 char buf[2 * sizeof(unsigned long)];
 
@@ -2971,7 +2971,7 @@ ffffffe00020208c:	00004797          	auipc	a5,0x4
 ffffffe000202090:	f8c78793          	addi	a5,a5,-116 # ffffffe000206018 <seed>
 ffffffe000202094:	0007b703          	ld	a4,0(a5)
 ffffffe000202098:	00001797          	auipc	a5,0x1
-ffffffe00020209c:	2d878793          	addi	a5,a5,728 # ffffffe000203370 <lowerxdigits.0+0x18>
+ffffffe00020209c:	2d078793          	addi	a5,a5,720 # ffffffe000203368 <lowerxdigits.0+0x18>
 ffffffe0002020a0:	0007b783          	ld	a5,0(a5)
 ffffffe0002020a4:	02f707b3          	mul	a5,a4,a5
 ffffffe0002020a8:	00178713          	addi	a4,a5,1
