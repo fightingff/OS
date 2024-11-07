@@ -1,6 +1,11 @@
 #include "defs.h"
 #include "printk.h"
 #include "string.h"
+#include "mm.h"
+#include "vm.h"
+
+extern char _stext[], _etext[];
+extern char _srodata[], _erodata[];
 
 extern char *_stext, *_etext;
 extern char *_srodata, *_erodata;
@@ -73,17 +78,21 @@ void setup_vm_final() {
     memset(swapper_pg_dir, 0x0, PGSIZE);
 
     // No OpenSBI mapping required
-    
+
     // mapping kernel text X|-|R|V
-    // create_mapping(...);
+    LOG(BLUE "_stext: %p, _etext: %p" CLEAR, _stext, _etext);
+    LOG(BLUE "_srodata: %p, _erodata: %p" CLEAR, _srodata, _erodata);
+    create_mapping(swapper_pg_dir, (uint64_t)_stext, (uint64_t)_stext - PA2VA_OFFSET, (uint64_t)_etext - (uint64_t)_stext, 0b1011);
 
     // mapping kernel rodata -|-|R|V
-    // create_mapping(...);
+    create_mapping(swapper_pg_dir, (uint64_t)_srodata, (uint64_t)_srodata - PA2VA_OFFSET, (uint64_t)_erodata - (uint64_t)_srodata, 0b0011);
 
     // mapping other memory -|W|R|V
-    // create_mapping(...);
+    create_mapping(swapper_pg_dir, PGROUNDUP((uint64_t)_erodata), PGROUNDUP((uint64_t)_erodata) - PA2VA_OFFSET, VM_END - PGROUNDUP((uint64_t)_erodata), 0b0111);
 
+    printk("...create_mapping done!\n");
     // set satp with swapper_pg_dir
+    asm volatile("csrw satp, %0" :: "r"(((uint64_t)swapper_pg_dir >> 12) | (8llu << 60)));
 
     // YOUR CODE HERE
 
@@ -91,7 +100,7 @@ void setup_vm_final() {
     asm volatile("sfence.vma zero, zero");
 
     // flush icache
-    asm volatile("fence.i");
+    // asm volatile("fence.i");
     return;
 }
 
@@ -108,6 +117,26 @@ void create_mapping(uint64_t *pgtbl, uint64_t va, uint64_t pa, uint64_t sz, uint
      * 创建多级页表的时候可以使用 kalloc() 来获取一页作为页表目录
      * 可以使用 V bit 来判断页表项是否存在
     **/
+    LOG(RED "create_mapping(va: %p, pa: %p, sz: %p, perm: %p)" CLEAR, va, pa, sz, perm);
+    for (uint64_t i = 0; i < sz; i += PGSIZE) {
+        uint64_t va_s = va + i;
+        uint64_t index2 = (va_s >> 30) & 0x1ff;
+        uint64_t index1 = (va_s >> 21) & 0x1ff;
+        uint64_t index0 = (va_s >> 12) & 0x1ff;
 
+        if(!(pgtbl[index2] & 1)) {
+            pgtbl[index2] = ((uint64_t)kalloc() << 10) | perm;
+        }
 
+        uint64_t *pgtbl1 = (uint64_t *)(pgtbl[index2] >> 10);
+        if(!(pgtbl1[index1] & 1)) {
+            pgtbl1[index1] = ((uint64_t)kalloc() << 10) | perm;
+        }
+
+        uint64_t *pgtbl0 = (uint64_t *)(pgtbl1[index1] >> 10);
+        if(!(pgtbl0[index0] & 1)) {
+            pgtbl0[index0] = ((pa >> 12) << 10) | perm;
+        }
+    }
+   
 }

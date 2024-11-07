@@ -4,6 +4,7 @@
     .extern mm_init
     .extern task_init
     .extern setup_vm
+    .extern setup_vm_final
     .extern early_pgtbl
     .section .text.init
     .globl _start
@@ -19,6 +20,7 @@ _start:
     call relocate
     
     call mm_init
+    call setup_vm_final
     call task_init
 
     la t0, _traps
@@ -45,6 +47,7 @@ relocate:
     ######################
     li t0, 0xffffffe000000000 - 0x80000000
     add ra, ra, t0
+    # csrw stvec, ra
     add sp, sp, t0
 
     # need a fence to ensure the new translations are in use
