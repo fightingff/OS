@@ -8,6 +8,9 @@ extern char _stext[], _etext[];
 extern char _srodata[], _erodata[];
 extern char _sdata[], _edata[];
 
+extern char *_stext, *_etext;
+extern char *_srodata, *_erodata;
+
 /* early_pgtbl: 用于 setup_vm 进行 1GiB 的映射 */
 uint64_t early_pgtbl[512] __attribute__((__aligned__(0x1000)));
 
@@ -67,6 +70,7 @@ void setup_vm() {
     early_pgtbl[index] = (PHY_START >> 12) << 10; // PPN
     early_pgtbl[index] |= ((1 << 4) - 1);   // V | R | W | X
 
+    LOG(RED "text: %p" CLEAR, _stext);
     printk("...setup_vm done!\n");
 }
 
