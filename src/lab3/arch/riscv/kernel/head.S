@@ -47,7 +47,7 @@ relocate:
     ######################
     li t0, 0xffffffe000000000 - 0x80000000
     add ra, ra, t0
-    # csrw stvec, ra
+    csrw stvec, ra # set stvec = va(ra)
     add sp, sp, t0
 
     # need a fence to ensure the new translations are in use
