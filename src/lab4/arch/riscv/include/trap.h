@@ -8,4 +8,9 @@
 // SCAUSE_INTERRUPT: 最高位为 1 表示是 interrupt，为 0 表示是 exception
 // SCAUSE_TIMER_INT: 时钟中断的值 5
 
+struct pt_regs{
+    uint64_t x[32];
+    uint64_t sepc, sstatus;
+};
+
 #endif

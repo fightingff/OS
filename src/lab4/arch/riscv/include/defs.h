@@ -35,7 +35,11 @@
 #define PA2VA_OFFSET (VM_START - PHY_START)
 #define VM_END (PHY_END + PA2VA_OFFSET)
 
+// lab4 add
 #define USER_START (0x0000000000000000) // user space start virtual address
 #define USER_END (0x0000004000000000) // user space end virtual address
 
+#define SPP 8
+#define SPIE 5
+#define SUM 18
 #endif

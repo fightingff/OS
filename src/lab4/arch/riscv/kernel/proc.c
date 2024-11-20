@@ -5,6 +5,8 @@
 #include "printk.h"
 
 extern void __dummy();
+extern uint64_t swapper_pg_dir[512];
+extern char *_sramdisk, *_eramdisk;
 
 struct task_struct *idle;           // idle process
 struct task_struct *current;        // 指向当前运行线程的 task_struct
@@ -36,6 +38,17 @@ void task_init() {
     //     - ra 设置为 __dummy（见 4.2.2）的地址
     //     - sp 设置为该线程申请的物理页的高地址
 
+    /*
+    对于每个进程，初始化我们刚刚在 thread_struct 中添加的三个变量，具体而言：
+        - 将 sepc 设置为 USER_START
+        - 配置 sstatus 中的 SPP（使得 sret 返回至 U-Mode）、SPIE（sret 之后开启中断）、SUM（S-Mode 可以访问 User 页面）
+        - 将 sscratch 设置为 U-Mode 的 sp，其值为 USER_END （将用户态栈放置在 user space 的最后一个页面）
+    
+    对于每个进程，创建属于它自己的页表：
+        - 为了避免 U-Mode 和 S-Mode 切换的时候切换页表，我们将内核页表 swapper_pg_dir 复制到每个进程的页表中
+        - 将 uapp 所在的页面映射到每个进程的页表中
+    */
+
     /* YOUR CODE HERE */
 
     for(int i = 1; i < NR_TASKS; ++i) {
@@ -49,6 +62,18 @@ void task_init() {
 
         task[i]->thread.ra = (uint64_t)__dummy;
         task[i]->thread.sp = (uint64_t)task[i] + PGSIZE;
+
+        task[i]->thread.sepc = USER_START;
+        task[i]->thread.sstatus = csr_read(sstatus);
+        if(task[i]->thread.sstatus & (1 << SPP)){
+            task[i]->thread.sstatus ^= (1 << SPP);
+        }
+        task[i]->thread.sstatus |= (1 << SPIE) | (1 << SUM);
+
+        task[i]->thread.sscratch = USER_END;
+
+        // TODO: 4.2.2 pagetable?
+        task[i]->pgd = swapper_pg_dir;
     }
     printk("...task_init done!\n");
 }

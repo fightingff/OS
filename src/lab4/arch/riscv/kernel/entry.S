@@ -93,6 +93,9 @@ __dummy:
     # 将 sepc 设置为 dummy() 的地址，并使用 sret 从 S 模式中返回
     la t0, dummy
     csrw sepc, t0
+    csrr t1, sscratch
+    csrw sscratch, sp
+    add sp, t1, 0
     sret
 
     .globl __switch_to
@@ -113,6 +116,14 @@ __switch_to:
     sd s9, 88(a0)
     sd s10, 96(a0)
     sd s11, 104(a0)
+    
+    # save sepc, sstatus, sscratch
+    csrr t0, sepc
+    sd t0, 112(a0)
+    csrr t0, sstatus
+    sd t0, 120(a0)
+    csrr t0, sscratch
+    sd t0, 128(a0)
 
     # restore state from next process
     add a1, a1, 32
@@ -130,5 +141,13 @@ __switch_to:
     ld s9, 88(a1)
     ld s10, 96(a1)
     ld s11, 104(a1)
+
+    # sepc, sstatus, sscratch
+    ld t0, 112(a1)
+    csrw sepc, t0
+    ld t0, 120(a1)
+    csrw sstatus, t0
+    ld t0, 128(a1)
+    csrw sscratch, t0
 
     ret
