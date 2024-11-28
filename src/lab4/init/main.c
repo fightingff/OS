@@ -21,6 +21,7 @@ int start_kernel() {
     // x = csr_read(sscratch);
     // printk("written: sscratch = 0x%lx\n", x);   // print written value
 
-    run_idle();
+    schedule();
+    // run_idle();
     return 0;
 }

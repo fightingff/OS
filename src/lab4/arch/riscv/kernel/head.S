@@ -26,8 +26,8 @@ _start:
     la t0, _traps
     csrw stvec, t0  # set stvec = _traps
 
-    li t0, 32
-    csrs sie, t0    # set sie[STIE] = 1
+    # li t0, 32
+    # csrs sie, t0    # set sie[STIE] = 1
    
     call clock_set_next_event
     # set first time interrupt

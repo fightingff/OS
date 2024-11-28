@@ -74,12 +74,14 @@ void task_init() {
          * SUM 置 1
          */
         task[i]->thread.sstatus = csr_read(sstatus);
-        task[i]->thread.sstatus &= ~(1 << SPP);
-        task[i]->thread.sstatus |= (1 << SPIE);
-        task[i]->thread.sstatus |= (1 << SUM);
+        task[i]->thread.sstatus &= ~(1ull << SPP);
+        task[i]->thread.sstatus |= (1ull << SPIE);
+        task[i]->thread.sstatus |= (1ull << SUM);
 
         // 一个 page 4KiB，刚好是 512 个 64 bit，刚好是一级页表的大小
         task[i]->pgd = alloc_page();
+
+        printk("task[%d]->pgd = %p\n", i, task[i]->pgd);
         // 先复制一遍内核态的页表
         memcpy(task[i]->pgd, swapper_pg_dir, 512 * 8);
 
@@ -87,30 +89,21 @@ void task_init() {
         // 每个用户态程序运行的都是复制一遍的代码段
         // 先开一些 page，复制一遍代码段
         uint64_t user_app_len = _eramdisk - _sramdisk;
-        uint64_t user_app_pages = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
-        for(int j = 0; j < user_app_pages; ++j) {
-            char *page = alloc_page();
-            
-            if(j == user_app_pages - 1) {
-                // 最后一个 page，需要补齐
-                memcpy(page, _sramdisk + j * PGSIZE, user_app_len % PGSIZE);
-            } else {
-                // copy entire page
-                memcpy(page, _sramdisk + j * PGSIZE, PGSIZE);
-            }
-            
-            // 构建映射
-            uint64_t va = USER_START + j * PGSIZE;
-            uint64_t pa = (uint64_t)page;
-            create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x1F);
-        }
+        uint64_t user_app_pages_count = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
+        uint64_t *user_app_page = alloc_pages(user_app_pages_count);
+        memcpy(user_app_page, _sramdisk, user_app_len);
+        // 构建映射
+        create_mapping(task[i]->pgd, USER_START, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, 0x1F);
 
         // 构建并映射用户栈
         // 开一个 page 作为用户栈
-        char *user_stack = alloc_page();
+        uint64_t *user_stack = alloc_page();
         uint64_t va = USER_END - PGSIZE;
-        uint64_t pa = (uint64_t)user_stack;
-        create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x1F);
+        uint64_t pa = (uint64_t)user_stack - PA2VA_OFFSET;
+        create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x17);
+
+        // 转为物理地址
+        task[i]->pgd = (uint64_t *)((uint64_t)task[i]->pgd - PA2VA_OFFSET);
         
         // 设置栈指针
         // sp 为内核态指针

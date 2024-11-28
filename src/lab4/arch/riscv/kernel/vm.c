@@ -86,7 +86,7 @@ void setup_vm_final() {
     create_mapping(swapper_pg_dir, (uint64_t)_srodata, (uint64_t)_srodata - PA2VA_OFFSET, (uint64_t)_erodata - (uint64_t)_srodata, 0b0011);
 
     // mapping other memory -|W|R|V
-    create_mapping(swapper_pg_dir, (uint64_t)_sdata, (uint64_t)_sdata - PA2VA_OFFSET, VM_END -(uint64_t)_sdata, 0b0111);
+    create_mapping(swapper_pg_dir, (uint64_t)_sdata, (uint64_t)_sdata - PA2VA_OFFSET, VM_END - (uint64_t)_sdata, 0b0111);
 
     printk("...create_mapping done!\n");
     // set satp with swapper_pg_dir
@@ -171,7 +171,7 @@ void create_mapping(uint64_t *pgtbl, uint64_t va, uint64_t pa, uint64_t sz, uint
         // 二级页表
         uint64_t *pgtbl1 = (uint64_t *)((pgtbl[index2] >> 10 << 12) + PA2VA_OFFSET);
         if(!(pgtbl1[index1] & 1)) {
-            pgtbl1[index1] = ((uint64_t)kalloc() - PA2VA_OFFSET>> 12 << 10) | 1;
+            pgtbl1[index1] = ((uint64_t)kalloc() - PA2VA_OFFSET >> 12 << 10) | 1;
         }
 
         // 叶子页表

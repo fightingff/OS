@@ -30,7 +30,7 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         }else if(regs->x[17] == SYS_WRITE){
             regs->x[10] = printk("%s", regs->x[12]);
         }else {
-             printk("[S] Unhandled interrupt/exception: scause=0x%lx, sepc=0x%lx\n", scause, sepc);
+             printk("[U] Unhandled interrupt/exception: scause=0x%lx, sepc=0x%lx\n", scause, sepc);
         }
 
     }else{

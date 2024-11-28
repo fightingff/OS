@@ -109,8 +109,8 @@ no_switch_end:
     .globl __dummy
 __dummy:
     # 将 sepc 设置为 dummy() 的地址，并使用 sret 从 S 模式中返回
-    la t0, dummy
-    csrw sepc, t0
+    # la t0, dummy
+    # csrw sepc, t0
 
     # 交换 用户态 和 内核态 的 栈指针
     csrrw sp, sscratch, sp
@@ -172,15 +172,16 @@ __switch_to:
     # 切换页表
     ld t0, 136(a1)
     # t0 是地址, 需要转换为 PPN
-    srl t0, t0, 12 
+    slli t0, t0, 8
+    srli t0, t0, 20
 
     # set ASID
     li t1, 0
-    sll t1, t1, 44
+    slli t1, t1, 44
 
     # set mode
     li t2, 8
-    sll t2, t2, 60
+    slli t2, t2, 60
 
     # set satp
     or t0, t0, t1
