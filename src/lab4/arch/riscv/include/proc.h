@@ -14,35 +14,14 @@
 #define PRIORITY_MIN 1
 #define PRIORITY_MAX 10
 
+// lab4 的 线程状态段数据结构
 struct thread_struct {
     uint64_t ra;
     uint64_t sp;                     
     uint64_t s[12];
-    uint64_t sepc, sstatus, sscratch; 
+    uint64_t sepc, sstatus, sscratch;  // lab4 独有
 };
 
-struct task_struct {
-    uint64_t state;
-    uint64_t counter;
-    uint64_t priority;
-    uint64_t pid;
-
-    struct thread_struct thread;
-    uint64_t *pgd;  // 用户态页表
-};
-
-/* former one */
-/* 线程状态段数据结构 */
-/*
-struct thread_struct {
-    uint64_t ra;
-    uint64_t sp;
-    uint64_t s[12];
-};
-*/
-
-/* 线程数据结构 */
-/*
 struct task_struct {
     uint64_t state;     // 线程状态
     uint64_t counter;   // 运行剩余时间
@@ -50,8 +29,8 @@ struct task_struct {
     uint64_t pid;       // 线程 id
 
     struct thread_struct thread;
+    uint64_t *pgd;  // 用户态页表, lab4 独有
 };
-*/
 
 /* 线程初始化，创建 NR_TASKS 个线程 */
 void task_init();

@@ -3,6 +3,16 @@
     .align 2
     .globl _traps 
 _traps:
+    # 同理，在 _traps 的首尾我们都需要做类似的操作，进入 trap 的时候需要切换到内核栈，处理完成后需要再切换回来
+    # 注意如果是内核线程（没有用户栈）触发了异常，则不需要进行切换。（内核线程的 sp 永远指向的内核栈，且 sscratch 为 0）
+
+    # 切换到内核栈
+    # 需要判断是否是内核线程，如果是内核线程则不需要切换
+    beq sscratch, zero, no_switch_begin
+    # csrrw 原子性交换
+    csrrw sp, sscratch, sp
+
+no_switch_begin:
     addi sp, sp, -264   # allocate 256 bytes stack space
     sd x0, 0(sp)
     sd x1, 8(sp)
@@ -84,6 +94,11 @@ _traps:
     addi sp, sp, 264    # restore stack pointer
     # 3. restore sepc and 32 registers (x2(sp) should be restore last) from stack
 
+    beq sscratch, zero, no_switch_end
+    # 切换回用户栈
+    csrrw sp, sscratch, sp
+
+no_switch_end:
     sret    
     # 4. return from trap
 
@@ -93,9 +108,10 @@ __dummy:
     # 将 sepc 设置为 dummy() 的地址，并使用 sret 从 S 模式中返回
     la t0, dummy
     csrw sepc, t0
-    csrr t1, sscratch
-    csrw sscratch, sp
-    add sp, t1, 0
+
+    # 交换 用户态 和 内核态 的 栈指针
+    csrrw sp, sscratch, sp
+
     sret
 
     .globl __switch_to
@@ -150,4 +166,24 @@ __switch_to:
     ld t0, 128(a1)
     csrw sscratch, t0
 
+    # 切换页表
+    ld t0, 136(a1)
+    # t0 是地址, 需要转换为 PPN
+    srl t0, t0, 12 
+
+    # set ASID
+    li t1, 0
+    sll t1, t1, 44
+
+    # set mode
+    li t2, 8
+    sll t2, t2, 60
+
+    # set satp
+    or t0, t0, t1
+    or t0, t0, t2
+    csrw satp, t0
+
+    # 刷新 TLB
+    sfence.vma zero, zero
     ret

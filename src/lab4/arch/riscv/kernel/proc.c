@@ -1,6 +1,8 @@
 #include "mm.h"
+#include "vm.h"
 #include "defs.h"
 #include "proc.h"
+#include "string.h"
 #include "stdlib.h"
 #include "printk.h"
 
@@ -11,6 +13,9 @@ extern char *_sramdisk, *_eramdisk;
 struct task_struct *idle;           // idle process
 struct task_struct *current;        // 指向当前运行线程的 task_struct
 struct task_struct *task[NR_TASKS]; // 线程数组，所有的线程都保存在此
+
+// 用户程序的代码段
+extern char _sramdisk[], _eramdisk[];
 
 void task_init() {
     srand(2024);
@@ -61,19 +66,58 @@ void task_init() {
         task[i]->pid = i;
 
         task[i]->thread.ra = (uint64_t)__dummy;
-        task[i]->thread.sp = (uint64_t)task[i] + PGSIZE;
-
         task[i]->thread.sepc = USER_START;
+
+        /**
+         * 配置 sstatus 中的 SPP（使得 sret 返回至 U-Mode）、SPIE（sret 之后开启中断）、SUM（S-Mode 可以访问 User 页面）
+         * SPP 置 0: When an SRET instruction (see Section 3.3.2) is executed to return from the trap handler, the privilege level is set to user mode if the SPP bit is 0, or supervisor mode if the SPP bit is 1; SPP is then set to 0.
+         * SPIE 置 1: The SPIE bit indicates whether supervisor interrupts were enabled prior to trapping into supervisor mode. When a trap is taken into supervisor mode, SPIE is set to SIE, and SIE is set to 0. When an SRET instruction is executed, SIE is set to SPIE, then SPIE is set to 1
+         * SUM 置 1
+         */
         task[i]->thread.sstatus = csr_read(sstatus);
-        if(task[i]->thread.sstatus & (1 << SPP)){
-            task[i]->thread.sstatus ^= (1 << SPP);
+        task[i]->thread.sstatus &= ~(1 << SPP);
+        task[i]->thread.sstatus |= (1 << SPIE);
+        task[i]->thread.sstatus |= (1 << SUM);
+
+        // 一个 page 4KiB，刚好是 512 个 64 bit，刚好是一级页表的大小
+        task[i]->pgd = alloc_page();
+        // 先复制一遍内核态的页表
+        memcpy(task[i]->pgd, swapper_pg_dir, 512 * 8);
+
+        // 复制程序并构造映射
+        // 每个用户态程序运行的都是复制一遍的代码段
+        // 先开一些 page，复制一遍代码段
+        uint64_t user_app_len = _eramdisk - _sramdisk;
+        uint64_t user_app_pages = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
+        for(int j = 0; j < user_app_pages; ++j) {
+            char *page = alloc_page();
+            
+            if(j == user_app_pages - 1) {
+                // 最后一个 page，需要补齐
+                memcpy(page, _sramdisk + j * PGSIZE, user_app_len % PGSIZE);
+            } else {
+                // copy entire page
+                memcpy(page, _sramdisk + j * PGSIZE, PGSIZE);
+            }
+            
+            // 构建映射
+            uint64_t va = USER_START + j * PGSIZE;
+            uint64_t pa = (uint64_t)page;
+            create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x1F);
         }
-        task[i]->thread.sstatus |= (1 << SPIE) | (1 << SUM);
 
+        // 构建并映射用户栈
+        // 开一个 page 作为用户栈
+        char *user_stack = alloc_page();
+        uint64_t va = USER_END - PGSIZE;
+        uint64_t pa = (uint64_t)user_stack;
+        create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x1F);
+        
+        // 设置栈指针
+        // sp 为内核态指针
+        // sscratch 为用户态指针
+        task[i]->thread.sp = (uint64_t)task[i] + PGSIZE;
         task[i]->thread.sscratch = USER_END;
-
-        // TODO: 4.2.2 pagetable?
-        task[i]->pgd = swapper_pg_dir;
     }
     printk("...task_init done!\n");
 }

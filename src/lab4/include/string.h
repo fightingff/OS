@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 
-void *memset(void *, int, uint64_t);
+void *memset(void *, uint8_t, uint64_t);
+void *memcpy(void *, void *, uint64_t);
 
 #endif
