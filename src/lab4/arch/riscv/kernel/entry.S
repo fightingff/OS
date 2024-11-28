@@ -8,12 +8,13 @@ _traps:
 
     # 切换到内核栈
     # 需要判断是否是内核线程，如果是内核线程则不需要切换
-    beq sscratch, zero, no_switch_begin
     # csrrw 原子性交换
+    csrrw sp, sscratch, sp
+    bnez sp, no_switch_begin
     csrrw sp, sscratch, sp
 
 no_switch_begin:
-    addi sp, sp, -264   # allocate 256 bytes stack space
+    addi sp, sp, -272   # allocate 256 bytes stack space
     sd x0, 0(sp)
     sd x1, 8(sp)
     sd x2, 16(sp)
@@ -48,12 +49,14 @@ no_switch_begin:
     sd x31, 248(sp)
     csrr t0, sepc
     sd t0, 256(sp) # can't directly store sepc to stack, csrr t0 fisrt
-    # 1. save 32 64-registers and sepc to stack
+    csrr t0, sstatus
+    sd t0, 264(sp)
 
 
     # function parameters: scause, sepc
     csrr a0, scause
     csrr a1, sepc
+    mv a2, sp
     call trap_handler
     # 2. call trap_handler
 
@@ -91,11 +94,11 @@ no_switch_begin:
     ld x2, 16(sp)
     ld x1, 8(sp)
     ld x0, 0(sp)
-    addi sp, sp, 264    # restore stack pointer
+    addi sp, sp, 272    # restore stack pointer
     # 3. restore sepc and 32 registers (x2(sp) should be restore last) from stack
 
-    beq sscratch, zero, no_switch_end
-    # 切换回用户栈
+    csrrw sp, sscratch, sp
+    bnez sp, no_switch_end
     csrrw sp, sscratch, sp
 
 no_switch_end:

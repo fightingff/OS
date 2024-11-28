@@ -8,7 +8,6 @@
 
 extern void __dummy();
 extern uint64_t swapper_pg_dir[512];
-extern char *_sramdisk, *_eramdisk;
 
 struct task_struct *idle;           // idle process
 struct task_struct *current;        // 指向当前运行线程的 task_struct

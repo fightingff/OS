@@ -15,10 +15,11 @@ CFLAG := $(CF) $(INCLUDE) -DTEST_SCHED=$(TEST_SCHED)
 
 .PHONY:all run debug clean
 all: clean
+	${MAKE} -C user all
 	${MAKE} -C lib all
 	${MAKE} -C init all
 	${MAKE} -C arch/riscv all
-	${MAKE} -C user all
+	
 	@echo -e '\n'Build Finished OK
 
 run: all

@@ -8,9 +8,6 @@ extern char _stext[], _etext[];
 extern char _srodata[], _erodata[];
 extern char _sdata[], _edata[];
 
-extern char *_stext, *_etext;
-extern char *_srodata, *_erodata;
-
 /* early_pgtbl: 用于 setup_vm 进行 1GiB 的映射 */
 uint64_t early_pgtbl[512] __attribute__((__aligned__(0x1000)));
 
