@@ -14,7 +14,7 @@ _traps:
     csrrw sp, sscratch, sp
 
 no_switch_begin:
-    addi sp, sp, -272   # allocate 256 bytes stack space
+    addi sp, sp, -280   # allocate 256 bytes stack space
     sd x0, 0(sp)
     sd x1, 8(sp)
     sd x2, 16(sp)
@@ -51,6 +51,9 @@ no_switch_begin:
     sd t0, 256(sp) # can't directly store sepc to stack, csrr t0 fisrt
     csrr t0, sstatus
     sd t0, 264(sp)
+    csrr t0, sscratch
+    sd t0, 272(sp)
+    csrw sscratch, zero
 
 
     # function parameters: scause, sepc
@@ -60,6 +63,8 @@ no_switch_begin:
     call trap_handler
     # 2. call trap_handler
 
+    ld t0, 272(sp)
+    csrw sscratch, t0
     ld t0, 256(sp)
     csrw sepc, t0   # restore sepc also can't directly load sepc from stack
     ld x31, 248(sp)
@@ -94,7 +99,7 @@ no_switch_begin:
     ld x2, 16(sp)
     ld x1, 8(sp)
     ld x0, 0(sp)
-    addi sp, sp, 272    # restore stack pointer
+    addi sp, sp, 280    # restore stack pointer
     # 3. restore sepc and 32 registers (x2(sp) should be restore last) from stack
 
     csrrw sp, sscratch, sp
