@@ -5,6 +5,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "printk.h"
+#include "elf.h"
 
 extern void __dummy();
 extern uint64_t swapper_pg_dir[512];
@@ -15,6 +16,32 @@ struct task_struct *task[NR_TASKS]; // 线程数组，所有的线程都保存�
 
 // 用户程序的代码段
 extern char _sramdisk[], _eramdisk[];
+
+void load_program(struct task_struct *task) {
+    Elf64_Ehdr *ehdr = (Elf64_Ehdr *)_sramdisk;
+    Elf64_Phdr *phdrs = (Elf64_Phdr *)(_sramdisk + ehdr->e_phoff);
+    for (int i = 0; i < ehdr->e_phnum; ++i) {
+        Elf64_Phdr *phdr = phdrs + i;
+        if (phdr->p_type == PT_LOAD) {
+            // alloc space and copy content
+            // do mapping
+            uint64_t user_app_page_offset = (uint64_t)(_sramdisk + phdr->p_offset) & 0xfff;
+            uint64_t user_app_mem = phdr->p_memsz + user_app_page_offset;
+            uint64_t user_app_pages_count = user_app_mem / PGSIZE + (user_app_mem % PGSIZE != 0);
+            char *user_app_page = alloc_pages(user_app_pages_count);
+           
+            memset(user_app_page, 0, user_app_page_offset);
+            memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
+            memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
+            
+            uint64_t perm = 0x0;
+            perm |= (1 << 4) | 1;
+            perm |= ((phdr->p_flags & 0x4) >> 1) | ((phdr->p_flags & 0x2) << 1) | ((phdr->p_flags & 0x1) << 3);
+            create_mapping(task->pgd, phdr->p_vaddr, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, perm);
+        }
+    }
+    task->thread.sepc = ehdr->e_entry;
+}
 
 void task_init() {
     srand(2024);
@@ -88,12 +115,17 @@ void task_init() {
         // 复制程序并构造映射
         // 每个用户态程序运行的都是复制一遍的代码段
         // 先开一些 page，复制一遍代码段
+        /*
         uint64_t user_app_len = _eramdisk - _sramdisk;
         uint64_t user_app_pages_count = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
         uint64_t *user_app_page = alloc_pages(user_app_pages_count);
         memcpy(user_app_page, _sramdisk, user_app_len);
         // 构建映射
         create_mapping(task[i]->pgd, USER_START, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, 0x1F);
+        */
+
+        // 使用ELF格式直接load
+        load_program(task[i]);
 
         // 构建并映射用户栈
         // 开一个 page 作为用户栈
