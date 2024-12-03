@@ -17,6 +17,15 @@ struct task_struct *task[NR_TASKS]; // 线程数组，所有的线程都保存�
 // 用户程序的代码段
 extern char _sramdisk[], _eramdisk[];
 
+// 一个我加的小函数，将 elf 文件的 flags 变为 SV39 的 perm
+// 自动加上 User Page 那一位
+uint64_t vp_flags_to_perm(uint64_t flags) {
+    uint64_t perm = 0x0;
+    perm |= (1 << 4) | 1;
+    perm |= ((flags & 0x4) >> 1) | ((flags & 0x2) << 1) | ((flags & 0x1) << 3);
+    return perm;
+}
+
 void load_program(struct task_struct *task) {
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)_sramdisk;
     Elf64_Phdr *phdrs = (Elf64_Phdr *)(_sramdisk + ehdr->e_phoff);
@@ -28,20 +37,105 @@ void load_program(struct task_struct *task) {
             uint64_t user_app_page_offset = (uint64_t)(_sramdisk + phdr->p_offset) & 0xfff;
             uint64_t user_app_mem = phdr->p_memsz + user_app_page_offset;
             uint64_t user_app_pages_count = user_app_mem / PGSIZE + (user_app_mem % PGSIZE != 0);
-            char *user_app_page = alloc_pages(user_app_pages_count);
+
+            do_mmap(&task->mm, PGROUNDDOWN(phdr->p_vaddr), user_app_pages_count * PGSIZE, phdr->p_offset, phdr->p_filesz, phdr->p_flags);
+
+            // char *user_app_page = alloc_pages(user_app_pages_count);
            
-            memset(user_app_page, 0, user_app_page_offset);
-            memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
-            memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
+            // memset(user_app_page, 0, user_app_page_offset);
+            // memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
+            // memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
             
-            uint64_t perm = 0x0;
-            perm |= (1 << 4) | 1;
-            perm |= ((phdr->p_flags & 0x4) >> 1) | ((phdr->p_flags & 0x2) << 1) | ((phdr->p_flags & 0x1) << 3);
-            create_mapping(task->pgd, phdr->p_vaddr, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, perm);
+            // create_mapping(task->pgd, phdr->p_vaddr, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, perm);
         }
     }
     task->thread.sepc = ehdr->e_entry;
 }
+
+// 查找包含虚拟地址 addr 的 vma 项
+struct vm_area_struct *find_vma(struct mm_struct *mm, uint64_t addr) {
+    struct vm_area_struct *cur = mm->mmap;
+    for(; cur != NULL; cur = cur->vm_next) {
+        if(cur->vm_start <= addr && addr < cur->vm_end) {
+            return cur;
+        }
+    }
+    return NULL;
+}
+
+uint64_t do_mmap(struct mm_struct *mm, uint64_t addr, uint64_t len, uint64_t vm_pgoff, uint64_t vm_filesz, uint64_t flags) {
+    // len 必须是对齐后的，而且是整页
+    ASSERT((len & 0xFFF) == 0);
+    ASSERT((addr & 0xFFF) == 0);
+
+    struct vm_area_struct *vma = (struct vm_area_struct *)alloc_page();
+    vma->vm_mm = mm;
+    vma->vm_start = addr;
+    vma->vm_end = addr + len;
+    vma->vm_pgoff = vm_pgoff;
+    vma->vm_filesz = vm_filesz;
+    vma->vm_flags = flags;
+
+    // 插入表头
+    vma->vm_next = mm->mmap;
+    mm->mmap = vma;
+
+    vma->vm_prev = NULL;
+    if(vma->vm_next) {
+        vma->vm_next->vm_prev = vma;
+    }
+}
+
+void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_addr) {
+    ASSERT(vma != NULL);
+    ASSERT(vma->vm_start <= bad_addr && bad_addr <= vma->vm_end);
+
+    // 首先先变成虚拟地址上的 pgd
+    pgd = (uint64_t *)((uint64_t)pgd + PA2VA_OFFSET);
+
+    uint64_t va = PGROUNDDOWN(bad_addr);
+    uint64_t perm = vp_flags_to_perm(vma->vm_flags);
+
+    // 申请一页用于映射
+    uint8_t *page = alloc_page();
+    memset(page, 0, PGSIZE);
+
+    uint64_t page_offset = (vma->vm_pgoff & 0xFFF);
+
+    LOG(GREEN "do_map_one_page: va = %llx, bad_addr = %llx" CLEAR, va, bad_addr);
+
+    // 如果是匿名空间，则直接映射空页即可
+    if(!(vma->vm_flags & VM_ANON)) {
+        LOG(GREEN "do_map_one_page: VM_ANON" CLEAR);
+        create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
+        return;
+    }
+
+    // 否则不是匿名空间，要从外部 load
+
+    // memset(user_app_page, 0, user_app_page_offset);
+    // memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
+    // memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
+
+    // 总体来看
+    // 第一段: [vm_start, page_offset) 0
+    // 第二段: [vm_start + page_offset, vm_start + page_offset + filesz) copy
+    // 第三段: [vm_start + page_offset + filesz, vm_end) 0
+
+    // 用该页和第二段取交集即可，因为其他都是 0
+    uint64_t vm_l = MAX(vma->vm_start + page_offset, va);
+    uint64_t vm_r = MIN(vma->vm_start + page_offset + vma->vm_filesz, va + PGSIZE);
+    uint64_t pm_offset = vma->vm_pgoff + (vm_l - (vma->vm_start + page_offset));
+    LOG(GREEN "do_map_one_page: vm_l = %llx, vm_r = %llx" CLEAR, vm_l, vm_r);
+
+    if(vm_l < vm_r) {
+        memcpy(page + (vm_l - va), _sramdisk + pm_offset, vm_r - vm_l);
+    }
+
+    create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
+}
+
+
 
 void task_init() {
     srand(2024);
@@ -125,15 +219,16 @@ void task_init() {
         create_mapping(task[i]->pgd, USER_START, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, 0x1F);
         */
 
-        // 使用ELF格式直接load
+        // 使用 ELF 格式 load 程序到 vma
         load_program(task[i]);
 
         // 构建并映射用户栈
         // 开一个 page 作为用户栈
-        uint64_t *user_stack = alloc_page();
+        // uint64_t *user_stack = alloc_page();
         uint64_t va = USER_END - PGSIZE;
-        uint64_t pa = (uint64_t)user_stack - PA2VA_OFFSET;
-        create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x17);
+        // uint64_t pa = (uint64_t)user_stack - PA2VA_OFFSET;
+        // create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x17);
+        do_mmap(&task[i]->mm, va, PGSIZE, 0, 0, VM_ANON | VM_READ | VM_WRITE);
 
         // 转为物理地址
         task[i]->pgd = (uint64_t *)((uint64_t)task[i]->pgd - PA2VA_OFFSET);

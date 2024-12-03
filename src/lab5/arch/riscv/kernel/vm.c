@@ -147,7 +147,7 @@ void setup_vm_final() {
 */
 void create_mapping(uint64_t *pgtbl, uint64_t va, uint64_t pa, uint64_t sz, uint64_t perm) {
     /*
-     * pgtbl 为根页表的基地址
+     * pgtbl 为根页表的基地址 的 虚拟地址
      * va, pa 为需要映射的虚拟地址、物理地址
      * sz 为映射的大小，单位为字节
      * perm 为映射的权限（即页表项的低 8 位）

@@ -43,4 +43,15 @@
 #define SPIE 5
 #define SUM 18
 
+// lab5 add
+// 每块 vma 都有自己的 flag 来定义权限以及分类（是否匿名）
+#define VM_ANON 0x1
+#define VM_READ 0x2
+#define VM_WRITE 0x4
+#define VM_EXEC 0x8
+
+// my add
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 #endif
