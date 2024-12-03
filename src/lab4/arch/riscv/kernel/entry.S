@@ -113,10 +113,7 @@ no_switch_end:
     .extern dummy
     .globl __dummy
 __dummy:
-    # 将 sepc 设置为 dummy() 的地址，并使用 sret 从 S 模式中返回
-    # la t0, dummy
-    # csrw sepc, t0
-
+    # sepc 在 __switch_to 中被设置了，这里仅需交换栈指针
     # 交换 用户态 和 内核态 的 栈指针
     csrrw sp, sscratch, sp
 

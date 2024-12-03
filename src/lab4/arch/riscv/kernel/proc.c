@@ -115,6 +115,7 @@ void task_init() {
         // 复制程序并构造映射
         // 每个用户态程序运行的都是复制一遍的代码段
         // 先开一些 page，复制一遍代码段
+        
         /*
         uint64_t user_app_len = _eramdisk - _sramdisk;
         uint64_t user_app_pages_count = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
@@ -144,48 +145,6 @@ void task_init() {
         task[i]->thread.sscratch = USER_END;
     }
     printk("...task_init done!\n");
-}
-
-#if TEST_SCHED
-#define MAX_OUTPUT ((NR_TASKS - 1) * 10)
-char tasks_output[MAX_OUTPUT];
-int tasks_output_index = 0;
-char expected_output[] = "2222222222111111133334222222222211111113";
-#include "sbi.h"
-#endif
-
-void dummy() {
-    // LOG(RED);
-    uint64_t MOD = 1000000007;
-    uint64_t auto_inc_local_var = 0;
-    int last_counter = -1;
-    while (1) {
-        if ((last_counter == -1 || current->counter != last_counter) && current->counter > 0) {
-            if (current->counter == 1) {
-                --(current->counter);   // forced the counter to be zero if this thread is going to be scheduled
-            }                           // in case that the new counter is also 1, leading the information not printed.
-            last_counter = current->counter;
-            auto_inc_local_var = (auto_inc_local_var + 1) % MOD;
-            printk("[PID = %d] is running. auto_inc_local_var = %d\n", current->pid, auto_inc_local_var);
-            // LOG(RED "%llu\n", current->thread.ra);
-            #if TEST_SCHED
-            tasks_output[tasks_output_index++] = current->pid + '0';
-            if (tasks_output_index == MAX_OUTPUT) {
-                for (int i = 0; i < MAX_OUTPUT; ++i) {
-                    if (tasks_output[i] != expected_output[i]) {
-                        printk("\033[31mTest failed!\033[0m\n");
-                        printk("\033[31m    Expected: %s\033[0m\n", expected_output);
-                        printk("\033[31m    Got:      %s\033[0m\n", tasks_output);
-                        sbi_system_reset(SBI_SRST_RESET_TYPE_SHUTDOWN, SBI_SRST_RESET_REASON_NONE);
-                    }
-                }
-                printk("\033[32mTest passed!\033[0m\n");
-                printk("\033[32m    Output: %s\033[0m\n", expected_output);
-                sbi_system_reset(SBI_SRST_RESET_TYPE_SHUTDOWN, SBI_SRST_RESET_REASON_NONE);
-            }
-            #endif
-        }
-    }
 }
 
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
