@@ -55,7 +55,7 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         struct vm_area_struct *vma = find_vma(&current->mm, bad_addr);
         
         ASSERT(vma != NULL);
-        ASSERT(!(exception_code == SCAUSE_EXC_INSTRUCTION_PAGE_FAULT && (vma->vm_flags & VM_EXEC)));
+        ASSERT(!(exception_code == SCAUSE_EXC_INSTRUCTION_PAGE_FAULT && !(vma->vm_flags & VM_EXEC)));
 
         do_map_one_page(current->pgd, vma, bad_addr);
 

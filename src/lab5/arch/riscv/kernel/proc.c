@@ -17,12 +17,33 @@ struct task_struct *task[NR_TASKS]; // 线程数组，所有的线程都保存�
 // 用户程序的代码段
 extern char _sramdisk[], _eramdisk[];
 
+
+/**
+ * 几种 flag 格式: （最后几位的高位到低位）
+ * SV39 perm:   U | X | W | R | V
+ * elf p_flags:         R | W | X
+ * VM flag:         X | W | R | A 
+ * 下面给出相互转换的函数
+ */
+
+uint64_t vm_flags_to_perm(uint64_t vm_flags) {
+    uint64_t perm = (1 << 4) | 1;
+    perm |= (vm_flags & 0b1110);
+    return perm;
+}
+
 // 一个我加的小函数，将 elf 文件的 flags 变为 SV39 的 perm
-// 自动加上 User Page 那一位
-uint64_t vp_flags_to_perm(uint64_t flags) {
+// 自动加上 U 和 V
+uint64_t p_flags_to_perm(uint64_t p_flags) {
+    uint64_t perm = (1 << 4) | 1;
+    perm |= ((p_flags & 0x4) >> 1) | ((p_flags & 0x2) << 1) | ((p_flags & 0x1) << 3);
+    return perm;
+}
+
+uint64_t p_flags_to_vm_flags(uint64_t p_flags, bool anon) {
     uint64_t perm = 0x0;
-    perm |= (1 << 4) | 1;
-    perm |= ((flags & 0x4) >> 1) | ((flags & 0x2) << 1) | ((flags & 0x1) << 3);
+    if(anon) perm |= VM_ANON;
+    perm |= ((p_flags & 0x4) >> 1) | ((p_flags & 0x2) << 1) | ((p_flags & 0x1) << 3);
     return perm;
 }
 
@@ -32,21 +53,12 @@ void load_program(struct task_struct *task) {
     for (int i = 0; i < ehdr->e_phnum; ++i) {
         Elf64_Phdr *phdr = phdrs + i;
         if (phdr->p_type == PT_LOAD) {
-            // alloc space and copy content
             // do mapping
             uint64_t user_app_page_offset = (uint64_t)(_sramdisk + phdr->p_offset) & 0xfff;
             uint64_t user_app_mem = phdr->p_memsz + user_app_page_offset;
             uint64_t user_app_pages_count = user_app_mem / PGSIZE + (user_app_mem % PGSIZE != 0);
 
-            do_mmap(&task->mm, PGROUNDDOWN(phdr->p_vaddr), user_app_pages_count * PGSIZE, phdr->p_offset, phdr->p_filesz, phdr->p_flags);
-
-            // char *user_app_page = alloc_pages(user_app_pages_count);
-           
-            // memset(user_app_page, 0, user_app_page_offset);
-            // memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
-            // memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
-            
-            // create_mapping(task->pgd, phdr->p_vaddr, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, perm);
+            do_mmap(&task->mm, PGROUNDDOWN(phdr->p_vaddr), user_app_pages_count * PGSIZE, phdr->p_offset, phdr->p_filesz, p_flags_to_vm_flags(phdr->p_flags, false));
         }
     }
     task->thread.sepc = ehdr->e_entry;
@@ -94,7 +106,7 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
     pgd = (uint64_t *)((uint64_t)pgd + PA2VA_OFFSET);
 
     uint64_t va = PGROUNDDOWN(bad_addr);
-    uint64_t perm = vp_flags_to_perm(vma->vm_flags);
+    uint64_t perm = vm_flags_to_perm(vma->vm_flags);
 
     // 申请一页用于映射
     uint8_t *page = alloc_page();
@@ -105,18 +117,13 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
     LOG(GREEN "do_map_one_page: va = %llx, bad_addr = %llx" CLEAR, va, bad_addr);
 
     // 如果是匿名空间，则直接映射空页即可
-    if(!(vma->vm_flags & VM_ANON)) {
+    if(vma->vm_flags & VM_ANON) {
         LOG(GREEN "do_map_one_page: VM_ANON" CLEAR);
         create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
         return;
     }
 
     // 否则不是匿名空间，要从外部 load
-
-    // memset(user_app_page, 0, user_app_page_offset);
-    // memcpy(user_app_page + user_app_page_offset, _sramdisk + phdr->p_offset, phdr->p_filesz);
-    // memset(user_app_page + user_app_page_offset + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
-
     // 总体来看
     // 第一段: [vm_start, page_offset) 0
     // 第二段: [vm_start + page_offset, vm_start + page_offset + filesz) copy
@@ -134,7 +141,6 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
 
     create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
 }
-
 
 
 void task_init() {
@@ -206,28 +212,12 @@ void task_init() {
         // 先复制一遍内核态的页表
         memcpy(task[i]->pgd, swapper_pg_dir, 512 * 8);
 
-        // 复制程序并构造映射
-        // 每个用户态程序运行的都是复制一遍的代码段
-        // 先开一些 page，复制一遍代码段
-        
-        /*
-        uint64_t user_app_len = _eramdisk - _sramdisk;
-        uint64_t user_app_pages_count = user_app_len / PGSIZE + (user_app_len % PGSIZE != 0);
-        uint64_t *user_app_page = alloc_pages(user_app_pages_count);
-        memcpy(user_app_page, _sramdisk, user_app_len);
-        // 构建映射
-        create_mapping(task[i]->pgd, USER_START, (uint64_t)user_app_page - PA2VA_OFFSET, user_app_pages_count * PGSIZE, 0x1F);
-        */
-
         // 使用 ELF 格式 load 程序到 vma
         load_program(task[i]);
 
         // 构建并映射用户栈
-        // 开一个 page 作为用户栈
-        // uint64_t *user_stack = alloc_page();
+        // 开一个 page 作为用户栈, 由于 demand paging, 只需把这个映射加入 vma
         uint64_t va = USER_END - PGSIZE;
-        // uint64_t pa = (uint64_t)user_stack - PA2VA_OFFSET;
-        // create_mapping(task[i]->pgd, va, pa, PGSIZE, 0x17);
         do_mmap(&task[i]->mm, va, PGSIZE, 0, 0, VM_ANON | VM_READ | VM_WRITE);
 
         // 转为物理地址

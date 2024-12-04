@@ -20,7 +20,7 @@ static inline long fork() {
                   "mv %0, a0\n"
                 : "+r" (ret)
                 : "i" (SYS_CLONE));
-  return ret;
+    return ret;
 }
 
 void wait(unsigned int n) {
