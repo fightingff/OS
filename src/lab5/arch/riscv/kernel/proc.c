@@ -54,7 +54,7 @@ void load_program(struct task_struct *task) {
         Elf64_Phdr *phdr = phdrs + i;
         if (phdr->p_type == PT_LOAD) {
             // do mapping
-            uint64_t user_app_page_offset = (uint64_t)(_sramdisk + phdr->p_offset) & 0xfff;
+            uint64_t user_app_page_offset = phdr->p_offset & 0xfff;
             uint64_t user_app_mem = phdr->p_memsz + user_app_page_offset;
             uint64_t user_app_pages_count = user_app_mem / PGSIZE + (user_app_mem % PGSIZE != 0);
 
@@ -64,7 +64,7 @@ void load_program(struct task_struct *task) {
     task->thread.sepc = ehdr->e_entry;
 }
 
-// 查找包含虚拟地址 addr 的 vma 项
+// 查找包含虚拟地址 addr 的 vma 项, 不存在则返回 NULL
 struct vm_area_struct *find_vma(struct mm_struct *mm, uint64_t addr) {
     struct vm_area_struct *cur = mm->mmap;
     for(; cur != NULL; cur = cur->vm_next) {
@@ -76,10 +76,11 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, uint64_t addr) {
 }
 
 uint64_t do_mmap(struct mm_struct *mm, uint64_t addr, uint64_t len, uint64_t vm_pgoff, uint64_t vm_filesz, uint64_t flags) {
-    // len 必须是对齐后的，而且是整页
+    // 我规定：len 必须是对齐后的，而且是整页。addr 一定是页首。
     ASSERT((len & 0xFFF) == 0);
     ASSERT((addr & 0xFFF) == 0);
 
+    // 根据参数, 构建 vma
     struct vm_area_struct *vma = (struct vm_area_struct *)alloc_page();
     vma->vm_mm = mm;
     vma->vm_start = addr;
@@ -135,10 +136,12 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
     uint64_t pm_offset = vma->vm_pgoff + (vm_l - (vma->vm_start + page_offset));
     LOG(GREEN "do_map_one_page: vm_l = %llx, vm_r = %llx" CLEAR, vm_l, vm_r);
 
+    // 如果有交集则 copy
     if(vm_l < vm_r) {
         memcpy(page + (vm_l - va), _sramdisk + pm_offset, vm_r - vm_l);
     }
 
+    // 构建虚拟内存映射
     create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
 }
 
@@ -148,39 +151,35 @@ void task_init() {
 
     // 1. 调用 kalloc() 为 idle 分配一个物理页
     idle = (struct task_struct *)kalloc();
-
     // 2. 设置 state 为 TASK_RUNNING;
     idle->state = TASK_RUNNING;
-
     // 3. 由于 idle 不参与调度，可以将其 counter / priority 设置为 0
     idle->counter = idle->priority = 0;
-
     // 4. 设置 idle 的 pid 为 0
     idle->pid = 0;
-
     // 5. 将 current 和 task[0] 指向 idle
     current = task[0] = idle;
 
-    // 1. 参考 idle 的设置，为 task[1] ~ task[NR_TASKS - 1] 进行初始化
-    // 2. 其中每个线程的 state 为 TASK_RUNNING, 此外，counter 和 priority 进行如下赋值：
-    //     - counter  = 0;
-    //     - priority = rand() 产生的随机数（控制范围在 [PRIORITY_MIN, PRIORITY_MAX] 之间）
-    // 3. 为 task[1] ~ task[NR_TASKS - 1] 设置 thread_struct 中的 ra 和 sp
-    //     - ra 设置为 __dummy（见 4.2.2）的地址
-    //     - sp 设置为该线程申请的物理页的高地址
+    /** lab3 hint
+     * 1. 参考 idle 的设置，为 task[1] ~ task[NR_TASKS - 1] 进行初始化
+     * 2. 其中每个线程的 state 为 TASK_RUNNING, 此外，counter 和 priority 进行如下赋值：
+     *  - counter  = 0;
+     *  - priority = rand() 产生的随机数（控制范围在 [PRIORITY_MIN, PRIORITY_MAX] 之间）
+     * 3. 为 task[1] ~ task[NR_TASKS - 1] 设置 thread_struct 中的 ra 和 sp
+     *  - ra 设置为 __dummy（见 4.2.2）的地址
+     *  - sp 设置为该线程申请的物理页的高地址
+     */
 
-    /*
-    对于每个进程，初始化我们刚刚在 thread_struct 中添加的三个变量，具体而言：
-        - 将 sepc 设置为 USER_START
-        - 配置 sstatus 中的 SPP（使得 sret 返回至 U-Mode）、SPIE（sret 之后开启中断）、SUM（S-Mode 可以访问 User 页面）
-        - 将 sscratch 设置为 U-Mode 的 sp，其值为 USER_END （将用户态栈放置在 user space 的最后一个页面）
-    
-    对于每个进程，创建属于它自己的页表：
-        - 为了避免 U-Mode 和 S-Mode 切换的时候切换页表，我们将内核页表 swapper_pg_dir 复制到每个进程的页表中
-        - 将 uapp 所在的页面映射到每个进程的页表中
-    */
-
-    /* YOUR CODE HERE */
+    /** lab4 hint
+     * 对于每个进程，初始化我们刚刚在 thread_struct 中添加的三个变量，具体而言：
+     * - 将 sepc 设置为 USER_START
+     * - 配置 sstatus 中的 SPP（使得 sret 返回至 U-Mode）、SPIE（sret 之后开启中断）、SUM（S-Mode 可以访问 User 页面）
+     * - 将 sscratch 设置为 U-Mode 的 sp，其值为 USER_END （将用户态栈放置在 user space 的最后一个页面）
+     * 
+     * 对于每个进程，创建属于它自己的页表：
+     * - 为了避免 U-Mode 和 S-Mode 切换的时候切换页表，我们将内核页表 swapper_pg_dir 复制到每个进程的页表中
+     * - 将 uapp 所在的页面映射到每个进程的页表中
+     */
 
     for(int i = 1; i < NR_TASKS; ++i) {
         task[i] = (struct task_struct *)kalloc();

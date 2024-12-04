@@ -45,9 +45,8 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         || exception_code == SCAUSE_EXC_LOAD_PAGE_FAULT
         || exception_code == SCAUSE_EXC_STORE_OR_AMO_PAGE_FAULT
     )) {
-        // 处理 PAGE_FAULT
-        // 进行 Demand Paging
-        /**
+        // 处理 PAGE_FAULT, 进行 Demand Paging
+        /** 当触发 page fault 异常, stval 寄存器中会保存触发异常的虚拟地址
          * If stval is written with a nonzero value when a breakpoint, address-misaligned, access-fault, or page fault exception occurs on an instruction fetch, load, or store, then stval will contain the faulting virtual address.
          */
         
@@ -58,9 +57,7 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         ASSERT(!(exception_code == SCAUSE_EXC_INSTRUCTION_PAGE_FAULT && !(vma->vm_flags & VM_EXEC)));
 
         do_map_one_page(current->pgd, vma, bad_addr);
-
-    }
-    else {
+    } else {
         // 其他 interrupt / exceptiont
         printk("[S] Unhandled interrupt/exception: scause=0x%lx, sepc=0x%lx\n", scause, sepc);
     }
