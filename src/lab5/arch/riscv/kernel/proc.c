@@ -1,5 +1,6 @@
 #include "mm.h"
 #include "vm.h"
+#include "trap.h"
 #include "defs.h"
 #include "proc.h"
 #include "string.h"
@@ -8,11 +9,13 @@
 #include "elf.h"
 
 extern void __dummy();
+extern void __ret_from_fork();
 extern uint64_t swapper_pg_dir[512];
 
 struct task_struct *idle;           // idle process
 struct task_struct *current;        // 指向当前运行线程的 task_struct
 struct task_struct *task[NR_TASKS]; // 线程数组，所有的线程都保存在此
+uint64_t nr_tasks; // 当前总线程数
 
 // 用户程序的代码段
 extern char _sramdisk[], _eramdisk[];
@@ -145,6 +148,34 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
     create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
 }
 
+uint64_t do_fork(struct pt_regs *regs) {
+    ASSERT(nr_tasks < NR_TASKS);
+
+    struct task_struct *child = alloc_page();
+    memset(child, 0, PGSIZE);
+    memcpy(child, current, sizeof(*child));
+    child->counter = child->priority;
+    child->pid = nr_tasks;
+    child->thread.sp = (uint64_t)child + PGSIZE - sizeof(*regs); // 内核态指针
+    memcpy((uint8_t *)child->thread.sp, regs, sizeof(*regs));
+    child->thread.sscratch = regs->sscratch; // 用户态指针
+    child->thread.sepc = regs->sepc + 4;
+    child->thread.ra = (uint64_t)__ret_from_fork;
+    
+    child->pgd = (uint64_t *)alloc_page();
+    memcpy(child->pgd, swapper_pg_dir, PGSIZE);
+    child->pgd = (uint64_t *)((uint64_t)child->pgd - PA2VA_OFFSET);
+
+    LOG(GREEN "before copy_mapping" CLEAR);
+    copy_mapping((uint64_t *)PA2VA(child->pgd), (uint64_t *)PA2VA(current->pgd));
+    LOG(GREEN "after copy_mapping" CLEAR);
+
+    task[nr_tasks] = child;
+    nr_tasks++;
+
+    return child->pid;
+}
+
 
 void task_init() {
     srand(2024);
@@ -181,7 +212,9 @@ void task_init() {
      * - 将 uapp 所在的页面映射到每个进程的页表中
      */
 
-    for(int i = 1; i < NR_TASKS; ++i) {
+    nr_tasks = 1 + 1;
+    // 先只初始化一个线程
+    for(int i = 1; i <= 1; ++i) {
         task[i] = (struct task_struct *)kalloc();
         task[i]->state = TASK_RUNNING;
 
@@ -262,7 +295,7 @@ void schedule() {
 
     // LOG(RED);
     struct task_struct *next = idle;
-    for(int i = 1; i < NR_TASKS; ++i) {
+    for(int i = 1; i < nr_tasks; ++i) {
         if(task[i]->counter > next->counter){
             next = task[i];
         }
@@ -270,7 +303,7 @@ void schedule() {
 
     if(next->counter == 0) {
         printk("\n");
-        for(int i = 1; i < NR_TASKS; ++i) {
+        for(int i = 1; i < nr_tasks; ++i) {
             task[i]->counter = task[i]->priority;
             printk("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
         }

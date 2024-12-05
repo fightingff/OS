@@ -16,7 +16,7 @@
 
 struct pt_regs{
     uint64_t x[32];
-    uint64_t sepc, sstatus;
+    uint64_t sepc, sstatus, sscratch;
 };
 
 #endif

@@ -165,21 +165,51 @@ void create_mapping(uint64_t *pgtbl, uint64_t va, uint64_t pa, uint64_t sz, uint
         // 根页表
         if(!(pgtbl[index2] & 1)) {  // 根据 V bit 判断页表项是否存在
             // 先减去 PA2VA_OFFSET转换为物理地址，然后右移12位转换为PPN ，最后左移10位或上权限为转换为页表项
-            pgtbl[index2] = ((uint64_t)kalloc() - PA2VA_OFFSET >> 12 << 10) | 1;
+            pgtbl[index2] = (((uint64_t)kalloc() - PA2VA_OFFSET) >> 12 << 10) | 1;
         }
 
         // 二级页表
-        uint64_t *pgtbl1 = (uint64_t *)((pgtbl[index2] >> 10 << 12) + PA2VA_OFFSET);
+        uint64_t *pgtbl1 = (uint64_t *)((uint64_t)(pgtbl[index2] >> 10 << 12) + PA2VA_OFFSET);
         if(!(pgtbl1[index1] & 1)) {
-            pgtbl1[index1] = ((uint64_t)kalloc() - PA2VA_OFFSET >> 12 << 10) | 1;
+            pgtbl1[index1] = (((uint64_t)kalloc() - PA2VA_OFFSET) >> 12 << 10) | 1;
         }
 
         // 叶子页表
-        uint64_t *pgtbl0 = (uint64_t *)((pgtbl1[index1] >> 10 << 12) + PA2VA_OFFSET);
+        uint64_t *pgtbl0 = (uint64_t *)((uint64_t)(pgtbl1[index1] >> 10 << 12) + PA2VA_OFFSET);
         if(!(pgtbl0[index0] & 1)) {
             // 此时正确设置页表项的 PPN 和权限
-            pgtbl0[index0] = ((pa + i >> 12) << 10) | perm;
+            pgtbl0[index0] = (((pa + i) >> 12) << 10) | perm;
         }
     }
     LOG(RED "create_mapping(va: %p, pa: %p, sz: %p, perm: %p)" CLEAR, va, pa, sz, perm);
+}
+
+void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
+    // 深拷贝页表
+    // 传入的 dest_pgd 和 src_pgd 是虚拟地址
+
+    for(int i = 0; i < 512; i++) {
+        if(dest_pgd[i] == src_pgd[i]) {
+            continue;
+        }
+        if(!(src_pgd[i] & 1)) {
+            continue;
+        }
+        
+        // LOG(GREEN "src_pgd[%d] = %016llX" CLEAR, i, src_pgd[i]);
+        uint64_t *dest_page = (uint64_t *)alloc_page();
+        // LOG(GREEN "%d" CLEAR, i);
+        uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
+        // LOG(GREEN "%p %p" CLEAR, dest_page, src_page);
+        // LOG(GREEN "%d" CLEAR, i);
+        dest_pgd[i] = (VA2PA(dest_page) >> 12 << 10);
+        dest_pgd[i] |= (src_pgd[i] & 0x3FF);
+        memset(dest_page, 0, PGSIZE);
+
+        if(dest_pgd[i] & 0b1110) { // 为叶子节点
+            memcpy(dest_page, src_page, PGSIZE);
+        } else {
+            copy_mapping(dest_page, src_page);
+        }
+    }
 }

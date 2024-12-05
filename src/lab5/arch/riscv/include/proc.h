@@ -2,8 +2,9 @@
 #define __PROC_H__
 
 #include "stdint.h"
+#include "trap.h"
 
-#define NR_TASKS (1 + 4)   // 用于控制最大线程数量（idle 线程 + 4 线程）
+#define NR_TASKS (1 + 512)   // 用于控制最大线程数量（idle 线程 + 512 线程）
 
 #define TASK_RUNNING 0      // 为了简化实验，所有的线程都只有一种状态
 
@@ -71,6 +72,8 @@ uint64_t do_mmap(struct mm_struct *mm, uint64_t addr, uint64_t len, uint64_t vm_
 // 根据 vma, 映射包含 bad_addr 一页 到 用户线程的页表 pgd
 // 传入的 pgd 是物理地址的
 void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_addr);
+
+uint64_t do_fork(struct pt_regs *regs);
 
 /* 线程初始化，创建 NR_TASKS 个线程 */
 void task_init();

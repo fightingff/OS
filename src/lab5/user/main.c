@@ -20,6 +20,7 @@ static inline long fork() {
                   "mv %0, a0\n"
                 : "+r" (ret)
                 : "i" (SYS_CLONE));
+    printf("[U-MODE] fork return value: ret = %d\n", ret);
     return ret;
 }
 

@@ -54,4 +54,9 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
+#define VA2PA(x) (((uint64_t)(x) - (uint64_t)PA2VA_OFFSET))
+#define PA2VA(x) (((uint64_t)(x) + (uint64_t)PA2VA_OFFSET))
+#define PFN2PHYS(x) (((uint64_t)(x) << 12) + PHY_START)
+#define PHYS2PFN(x) ((((uint64_t)(x) - PHY_START) >> 12))
+
 #endif

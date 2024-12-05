@@ -30,12 +30,16 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         // schedule
         do_timer();
     } else if(!is_interrupt && exception_code == SCAUSE_EXC_U_ECALL) {
-        if(regs->x[17] == SYS_GETPID){
+        if(regs->x[17] == SYS_GETPID) {
             regs->x[10] = current->pid;
-            LOG(GREEN "ecall: SYS_GETPID" CLEAR);
-        } else if(regs->x[17] == SYS_WRITE){
-            regs->x[10] = printk("%s", regs->x[11]);
+            LOG(GREEN "ecall: SYS_GETPID, pid = %d" CLEAR, current->pid);
+        } else if(regs->x[17] == SYS_WRITE) {
             LOG(GREEN "ecall: SYS_WRITE" CLEAR);
+            regs->x[10] = printk("%s", regs->x[11]);
+        } else if (regs->x[17] == SYS_CLONE) {
+            LOG(GREEN "ecall: SYS_CLONE" CLEAR);
+            regs->x[10] = do_fork(regs);
+            LOG(GREEN "ecall: SYS_CLONE, child_pid = %llu\n" CLEAR, regs->x[10]);
         } else {
             printk("[U] Unhandled ecall: ecall_type=%016llX \n", regs->x[17]);
         }
@@ -51,6 +55,7 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
          */
         
         uint64_t bad_addr = csr_read(stval);
+        LOG(GREEN "page fault! bad_addr = %016llX" CLEAR, bad_addr);
         struct vm_area_struct *vma = find_vma(&current->mm, bad_addr);
         
         ASSERT(vma != NULL);

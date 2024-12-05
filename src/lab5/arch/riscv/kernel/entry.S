@@ -1,6 +1,7 @@
     .extern trap_handler
     .section .text.entry
     .align 2
+
     .globl _traps 
 _traps:
     # 同理，在 _traps 的首尾我们都需要做类似的操作，进入 trap 的时候需要切换到内核栈，处理完成后需要再切换回来
@@ -96,7 +97,7 @@ no_switch_begin:
     ld x5, 40(sp)
     ld x4, 32(sp)
     ld x3, 24(sp)
-    ld x2, 16(sp)
+    ld x2, 16(sp) 
     ld x1, 8(sp)
     ld x0, 0(sp)
     addi sp, sp, 280    # restore stack pointer
@@ -116,7 +117,53 @@ __dummy:
     # sepc 在 __switch_to 中被设置了，这里仅需交换栈指针
     # 交换 用户态 和 内核态 的 栈指针
     csrrw sp, sscratch, sp
+    sret
 
+    .globl __ret_from_fork
+__ret_from_fork:
+    # 目前的 sp 是内核态指针
+    # load 之前存的 父线程 的寄存器
+    ld x31, 248(sp)
+    ld x30, 240(sp)
+    ld x29, 232(sp)
+    ld x28, 224(sp)
+    ld x27, 216(sp)
+    ld x26, 208(sp)
+    ld x25, 200(sp)
+    ld x24, 192(sp)
+    ld x23, 184(sp)
+    ld x22, 176(sp)
+    ld x21, 168(sp)
+    ld x20, 160(sp)
+    ld x19, 152(sp)
+    ld x18, 144(sp)
+    ld x17, 136(sp)
+    ld x16, 128(sp)
+    ld x15, 120(sp)
+    ld x14, 112(sp)
+    ld x13, 104(sp)
+    ld x12, 96(sp)
+    ld x11, 88(sp)
+    ld x10, 80(sp)
+    ld x9, 72(sp)
+    ld x8, 64(sp)
+    ld x7, 56(sp)
+    ld x6, 48(sp)
+    ld x5, 40(sp)
+    ld x4, 32(sp)
+    ld x3, 24(sp)
+    # ld x2, 16(sp) 不要 load sp
+    ld x1, 8(sp)
+    ld x0, 0(sp)
+
+    addi sp, sp, 35 * 8    # restore stack pointer
+
+    # child 线程现在也认为其刚完成一个 fork
+    # load fork 的返回值
+    li a0, 0
+
+    # 交换 sp 和 sscratch
+    csrrw sp, sscratch, sp
     sret
 
     .globl __switch_to

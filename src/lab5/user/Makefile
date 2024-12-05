@@ -2,7 +2,7 @@ ASM_SRC		= $(filter-out uapp.S, $(sort $(wildcard *.S)))
 C_SRC		= $(sort $(wildcard *.c))
 OBJ			= $(patsubst %.S,%.o,$(ASM_SRC)) $(patsubst %.c,%.o,$(C_SRC))
 
-TEST        = PFH1
+TEST        = FORK3
 CFLAG		= -march=$(ISA) -mabi=$(ABI) -mcmodel=medany -fno-builtin -ffunction-sections -fdata-sections -nostartfiles -nostdlib -nostdinc -static -lgcc -Wl,--nmagic,--build-id=none -D$(TEST)
 
 all: uapp.o
