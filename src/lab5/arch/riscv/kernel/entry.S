@@ -158,10 +158,6 @@ __ret_from_fork:
 
     addi sp, sp, 35 * 8    # restore stack pointer
 
-    # child 线程现在也认为其刚完成一个 fork
-    # load fork 的返回值
-    li a0, 0
-
     # 交换 sp 和 sscratch
     csrrw sp, sscratch, sp
     sret

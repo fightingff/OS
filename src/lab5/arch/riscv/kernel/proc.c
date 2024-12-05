@@ -118,11 +118,11 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
 
     uint64_t page_offset = (vma->vm_pgoff & 0xFFF);
 
-    LOG(GREEN "do_map_one_page: va = %llx, bad_addr = %llx" CLEAR, va, bad_addr);
+    // LOG(GREEN "do_map_one_page: va = %llx, bad_addr = %llx" CLEAR, va, bad_addr);
 
     // 如果是匿名空间，则直接映射空页即可
     if(vma->vm_flags & VM_ANON) {
-        LOG(GREEN "do_map_one_page: VM_ANON" CLEAR);
+        // LOG(GREEN "do_map_one_page: VM_ANON" CLEAR);
         create_mapping(pgd, va, (uint64_t)page - PA2VA_OFFSET, PGSIZE, perm);
         return;
     }
@@ -137,7 +137,7 @@ void do_map_one_page(uint64_t *pgd, struct vm_area_struct *vma, uint64_t bad_add
     uint64_t vm_l = MAX(vma->vm_start + page_offset, va);
     uint64_t vm_r = MIN(vma->vm_start + page_offset + vma->vm_filesz, va + PGSIZE);
     uint64_t pm_offset = vma->vm_pgoff + (vm_l - (vma->vm_start + page_offset));
-    LOG(GREEN "do_map_one_page: vm_l = %llx, vm_r = %llx" CLEAR, vm_l, vm_r);
+    // LOG(GREEN "do_map_one_page: vm_l = %llx, vm_r = %llx" CLEAR, vm_l, vm_r);
 
     // 如果有交集则 copy
     if(vm_l < vm_r) {
@@ -156,19 +156,20 @@ uint64_t do_fork(struct pt_regs *regs) {
     memcpy(child, current, sizeof(*child));
     child->counter = child->priority;
     child->pid = nr_tasks;
+
     child->thread.sp = (uint64_t)child + PGSIZE - sizeof(*regs); // 内核态指针
     memcpy((uint8_t *)child->thread.sp, regs, sizeof(*regs));
+    ((struct pt_regs *)child->thread.sp)->x[10] = 0; // 子线程的 fork 返回值
+
     child->thread.sscratch = regs->sscratch; // 用户态指针
     child->thread.sepc = regs->sepc + 4;
     child->thread.ra = (uint64_t)__ret_from_fork;
     
+    // 维护子线程的页表
     child->pgd = (uint64_t *)alloc_page();
     memcpy(child->pgd, swapper_pg_dir, PGSIZE);
     child->pgd = (uint64_t *)((uint64_t)child->pgd - PA2VA_OFFSET);
-
-    LOG(GREEN "before copy_mapping" CLEAR);
     copy_mapping((uint64_t *)PA2VA(child->pgd), (uint64_t *)PA2VA(current->pgd));
-    LOG(GREEN "after copy_mapping" CLEAR);
 
     task[nr_tasks] = child;
     nr_tasks++;

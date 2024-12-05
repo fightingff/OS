@@ -189,19 +189,16 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
     // 传入的 dest_pgd 和 src_pgd 是虚拟地址
 
     for(int i = 0; i < 512; i++) {
-        if(dest_pgd[i] == src_pgd[i]) {
+        if(dest_pgd[i] == src_pgd[i]) { // 内核页
             continue;
         }
-        if(!(src_pgd[i] & 1)) {
+        if(!(src_pgd[i] & 1)) { // 该页表项不存在
             continue;
         }
         
-        // LOG(GREEN "src_pgd[%d] = %016llX" CLEAR, i, src_pgd[i]);
         uint64_t *dest_page = (uint64_t *)alloc_page();
-        // LOG(GREEN "%d" CLEAR, i);
         uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
-        // LOG(GREEN "%p %p" CLEAR, dest_page, src_page);
-        // LOG(GREEN "%d" CLEAR, i);
+
         dest_pgd[i] = (VA2PA(dest_page) >> 12 << 10);
         dest_pgd[i] |= (src_pgd[i] & 0x3FF);
         memset(dest_page, 0, PGSIZE);
@@ -209,6 +206,7 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
         if(dest_pgd[i] & 0b1110) { // 为叶子节点
             memcpy(dest_page, src_page, PGSIZE);
         } else {
+            // 不为叶子节点，递归深拷贝
             copy_mapping(dest_page, src_page);
         }
     }
