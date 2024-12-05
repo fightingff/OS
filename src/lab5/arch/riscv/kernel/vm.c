@@ -189,25 +189,62 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
     // 传入的 dest_pgd 和 src_pgd 是虚拟地址
 
     for(int i = 0; i < 512; i++) {
+        LOG(GREEN "copy_mapping %d, %p, %p" CLEAR, i, dest_pgd, src_pgd);
         if(dest_pgd[i] == src_pgd[i]) { // 内核页
             continue;
         }
+        LOG(GREEN "copy_mapping_) %d" CLEAR, i);
         if(!(src_pgd[i] & 1)) { // 该页表项不存在
             continue;
         }
-        
-        uint64_t *dest_page = (uint64_t *)alloc_page();
+        LOG(GREEN "copy_mapping_) %d" CLEAR, i);
+
         uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
 
+        if(dest_pgd[i] & 0b1110) { // 为叶子节点
+            // 将 src 的 PTE_W 位置 0
+            src_pgd[i] &= ~0x4;
+
+            dest_pgd[i] = (VA2PA(src_page) >> 12 << 10);
+            dest_pgd[i] |= (src_pgd[i] & 0x3FF);
+
+            get_page(src_page);
+
+            // flush TLB and icache
+            asm volatile("sfence.vma zero, zero");
+            asm volatile("fence.i");
+            continue;
+        }
+
+        // 不为叶子节点就递归
+        uint64_t *dest_page = (uint64_t *)alloc_page();
         dest_pgd[i] = (VA2PA(dest_page) >> 12 << 10);
         dest_pgd[i] |= (src_pgd[i] & 0x3FF);
         memset(dest_page, 0, PGSIZE);
-
-        if(dest_pgd[i] & 0b1110) { // 为叶子节点
-            memcpy(dest_page, src_page, PGSIZE);
-        } else {
-            // 不为叶子节点，递归深拷贝
-            copy_mapping(dest_page, src_page);
-        }
+        copy_mapping(dest_page, src_page);
     }
+}
+
+uint64_t * find_pte(uint64_t *pgd, uint64_t addr) {
+    // 传入的 pgd 为物理地址, addr 为虚拟地址
+    pgd = (uint64_t *)PA2VA(pgd);
+
+    uint64_t index2 = (addr >> 30) & 0x1ff;
+    uint64_t index1 = (addr >> 21) & 0x1ff;
+    uint64_t index0 = (addr >> 12) & 0x1ff;
+    if(!(pgd[index2] & 1)) {
+        return NULL;
+    }
+    
+    uint64_t *pgd1 = (uint64_t *)PA2VA(pgd[index2] >> 10 << 12);
+    if(!(pgd1[index1] & 1)) {
+        return NULL;
+    }
+
+    uint64_t *pgd0 = (uint64_t *)PA2VA(pgd1[index1] >> 10 << 12);
+    if(!(pgd0[index0] & 1)) {
+        return NULL;
+    }
+
+    return &pgd0[index0];
 }

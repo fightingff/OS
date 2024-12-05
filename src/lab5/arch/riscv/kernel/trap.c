@@ -61,7 +61,33 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         ASSERT(vma != NULL);
         ASSERT(!(exception_code == SCAUSE_EXC_INSTRUCTION_PAGE_FAULT && !(vma->vm_flags & VM_EXEC)));
 
-        do_map_one_page(current->pgd, vma, bad_addr);
+        uint64_t *pte = find_pte(current->pgd, bad_addr);
+
+        if(exception_code == SCAUSE_EXC_STORE_OR_AMO_PAGE_FAULT
+            && (vma->vm_flags & VM_WRITE) 
+            && pte != NULL && *pte & 0x4
+        ) {
+            LOG(GREEN "copy on write!" CLEAR);
+            uint64_t *src_page = (uint64_t *)(bad_addr & ~0xFFF);
+            uint64_t ref_cnt = get_page_refcnt(src_page);
+            ASSERT(ref_cnt > 0);
+
+            if(ref_cnt == 1) {
+                // PTE_W 改成 1 即可 
+                *pte |= 0x4;
+            } else {
+                uint64_t *page = (uint64_t *)alloc_page();
+                memcpy(page, src_page, PGSIZE);
+                *pte = ((uint64_t)page >> 12 << 10) | (*pte & 0x3FF);
+                *pte |= 0x4;
+                put_page(src_page);
+            }
+            // flush TLB and icache
+            asm volatile("sfence.vma zero, zero");
+            asm volatile("fence.i");
+        } else {
+            do_map_one_page(current->pgd, vma, bad_addr);
+        }
     } else {
         // 其他 interrupt / exceptiont
         printk("[S] Unhandled interrupt/exception: scause=0x%lx, sepc=0x%lx\n", scause, sepc);

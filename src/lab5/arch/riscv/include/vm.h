@@ -10,4 +10,6 @@ void create_mapping(uint64_t *pgtbl, uint64_t va, uint64_t pa, uint64_t sz, uint
 
 void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd);
 
+uint64_t *find_pte(uint64_t *pgd, uint64_t addr);
+
 #endif

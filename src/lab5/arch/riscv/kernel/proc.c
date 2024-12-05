@@ -171,6 +171,8 @@ uint64_t do_fork(struct pt_regs *regs) {
     child->pgd = (uint64_t *)((uint64_t)child->pgd - PA2VA_OFFSET);
     copy_mapping((uint64_t *)PA2VA(child->pgd), (uint64_t *)PA2VA(current->pgd));
 
+    LOG(GREEN "Finish Copy Mapping!" CLEAR);
+
     task[nr_tasks] = child;
     nr_tasks++;
 
