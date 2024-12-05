@@ -189,19 +189,19 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
     // 传入的 dest_pgd 和 src_pgd 是虚拟地址
 
     for(int i = 0; i < 512; i++) {
-        LOG(GREEN "copy_mapping %d, %p, %p" CLEAR, i, dest_pgd, src_pgd);
+        // LOG(GREEN "copy_mapping %d, %p, %p" CLEAR, i, dest_pgd, src_pgd);
         if(dest_pgd[i] == src_pgd[i]) { // 内核页
             continue;
         }
-        LOG(GREEN "copy_mapping_) %d" CLEAR, i);
+        // LOG(GREEN "copy_mapping_) %d" CLEAR, i);
         if(!(src_pgd[i] & 1)) { // 该页表项不存在
             continue;
         }
-        LOG(GREEN "copy_mapping_) %d" CLEAR, i);
+        // LOG(GREEN "copy_mapping_) %d" CLEAR, i);
 
         uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
 
-        if(dest_pgd[i] & 0b1110) { // 为叶子节点
+        if(src_pgd[i] & 0b1110) { // 为叶子节点
             // 将 src 的 PTE_W 位置 0
             src_pgd[i] &= ~0x4;
 
@@ -224,6 +224,34 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
         copy_mapping(dest_page, src_page);
     }
 }
+
+// void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
+//     // 深拷贝页表
+//     // 传入的 dest_pgd 和 src_pgd 是虚拟地址
+
+//     for(int i = 0; i < 512; i++) {
+//         LOG(GREEN "copy_mapping %d, %p, %p" CLEAR, i, dest_pgd, src_pgd);
+//         if(dest_pgd[i] == src_pgd[i]) { // 内核页
+//             continue;
+//         }
+//         if(!(src_pgd[i] & 1)) { // 该页表项不存在
+//             continue;
+//         }
+
+//         uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
+//         uint64_t *dest_page = (uint64_t *)alloc_page(); 
+//         memset(dest_page, 0, PGSIZE);
+//         dest_pgd[i] = (VA2PA(dest_page) >> 12 << 10);
+//         dest_pgd[i] |= (src_pgd[i] & 0x3FF);
+
+//         if(dest_pgd[i] & 0b1110) { // 为叶子节点
+//             memcpy(dest_page, src_page, PGSIZE);
+//         } else {
+//             // 不为叶子节点就递归
+//             copy_mapping(dest_page, src_page);
+//         }
+//     }
+// }
 
 uint64_t * find_pte(uint64_t *pgd, uint64_t addr) {
     // 传入的 pgd 为物理地址, addr 为虚拟地址
