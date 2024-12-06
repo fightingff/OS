@@ -55,20 +55,22 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
          */
         
         uint64_t bad_addr = csr_read(stval);
-        LOG(GREEN "page fault! bad_addr = %016llX" CLEAR, bad_addr);
+        LOG(GREEN "page fault! bad_addr = %016llX, exc = %d" CLEAR, bad_addr, exception_code);
         struct vm_area_struct *vma = find_vma(&current->mm, bad_addr);
         
         ASSERT(vma != NULL);
         ASSERT(!(exception_code == SCAUSE_EXC_INSTRUCTION_PAGE_FAULT && !(vma->vm_flags & VM_EXEC)));
 
         uint64_t *pte = find_pte(current->pgd, bad_addr);
+        LOG(GREEN "find pte = %p" CLEAR, pte);
 
         if(exception_code == SCAUSE_EXC_STORE_OR_AMO_PAGE_FAULT
             && (vma->vm_flags & VM_WRITE) 
-            && pte != NULL && *pte & 0x4
+            && pte != NULL && !(*pte & 0x4)
         ) {
-            LOG(GREEN "copy on write!" CLEAR);
-            uint64_t *src_page = (uint64_t *)(bad_addr & ~0xFFF);
+            // LOG(GREEN "copy on write!" CLEAR);
+            uint64_t *src_page = (uint64_t *)PA2VA(*pte >> 10 << 12);
+            // LOG(GREEN "src_page = %p" CLEAR, src_page);
             uint64_t ref_cnt = get_page_refcnt(src_page);
             ASSERT(ref_cnt > 0);
 
@@ -78,9 +80,10 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
             } else {
                 uint64_t *page = (uint64_t *)alloc_page();
                 memcpy(page, src_page, PGSIZE);
-                *pte = ((uint64_t)page >> 12 << 10) | (*pte & 0x3FF);
+                *pte = ((uint64_t)VA2PA(page) >> 12 << 10) | (*pte & 0x3FF);
                 *pte |= 0x4;
                 put_page(src_page);
+                // LOG(GREEN "*pte = %016LLX" CLEAR, *pte);
             }
             // flush TLB and icache
             asm volatile("sfence.vma zero, zero");
