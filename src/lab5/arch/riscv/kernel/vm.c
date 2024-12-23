@@ -189,15 +189,12 @@ void copy_mapping(uint64_t *dest_pgd, uint64_t *src_pgd) {
     // 传入的 dest_pgd 和 src_pgd 是虚拟地址
 
     for(int i = 0; i < 512; i++) {
-        // LOG(GREEN "copy_mapping %d, %p, %p" CLEAR, i, dest_pgd, src_pgd);
         if(dest_pgd[i] == src_pgd[i]) { // 内核页
             continue;
         }
-        // LOG(GREEN "copy_mapping_) %d" CLEAR, i);
         if(!(src_pgd[i] & 1)) { // 该页表项不存在
             continue;
         }
-        // LOG(GREEN "copy_mapping_) %d" CLEAR, i);
 
         uint64_t *src_page = (uint64_t *)PA2VA(src_pgd[i] >> 10 << 12);
 

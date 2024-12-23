@@ -70,6 +70,7 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         ) {
             // LOG(GREEN "copy on write!" CLEAR);
             uint64_t *src_page = (uint64_t *)PA2VA(*pte >> 10 << 12);
+            // uint64_t *src_page = (uint64_t *)(bad_addr & ~0xFFF);
             // LOG(GREEN "src_page = %p" CLEAR, src_page);
             uint64_t ref_cnt = get_page_refcnt(src_page);
             ASSERT(ref_cnt > 0);
