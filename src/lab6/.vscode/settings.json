@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "defs.h": "c",
+        "compare": "c",
+        "syscall.h": "c"
+    }
+}
