@@ -25,10 +25,10 @@ uint32_t next_cluster(uint64_t cluster) {
 
 void fat32_init(uint64_t lba, uint64_t size) {
     virtio_blk_read_sector(lba, (void*)&fat32_header);
-    fat32_volume.first_fat_sec = 0/* to calculate */;
-    fat32_volume.sec_per_cluster = 0/* to calculate */;
-    fat32_volume.first_data_sec = 0/* to calculate */;
-    fat32_volume.fat_sz = 0/* to calculate */;
+    fat32_volume.first_fat_sec = fat32_header.rsvd_sec_cnt; // reserved sectors 0~(rsvd_sec_cnt-1)
+    fat32_volume.sec_per_cluster = fat32_header.sec_per_clus; // sectors per cluster
+    fat32_volume.first_data_sec = fat32_header.rsvd_sec_cnt + fat32_header.num_fats * fat32_header.fat_sz32; // first data sector
+    fat32_volume.fat_sz = fat32_header.fat_sz32; // fat size
 }
 
 int is_fat32(uint64_t lba) {
