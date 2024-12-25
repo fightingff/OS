@@ -216,7 +216,7 @@ void task_init() {
      */
 
     nr_tasks = 1 + 1;
-    // 先只初始化一个线程
+    // 只初始化一个线程
     for(int i = 1; i <= 1; ++i) {
         task[i] = (struct task_struct *)kalloc();
         task[i]->state = TASK_RUNNING;
