@@ -59,4 +59,7 @@
 #define PFN2PHYS(x) (((uint64_t)(x) << 12) + PHY_START)
 #define PHYS2PFN(x) ((((uint64_t)(x) - PHY_START) >> 12))
 
+// fs
+#define AT_FDCWD    -100 
+
 #endif

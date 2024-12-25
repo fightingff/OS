@@ -48,6 +48,51 @@ int64_t sys_read(uint64_t fd, char *buf, uint64_t len) {
     return ret;
 }
 
+int64_t sys_lseek(int64_t fd, int64_t offset, int64_t whence) {
+    struct file *file = &(current->files->fd_array[fd]);
+
+    if (file->opened == 0) {
+        printk("file not opened\n");
+        return ERROR_FILE_NOT_OPEN;
+    } else {
+        // 不需要判断权限
+        int64_t ret = file->lseek(file, offset, whence);
+        return ret;
+    }
+}
+
+// 打开文件
+// dfd 在当前程序中没用
+// filename 其实是 path
+int64_t sys_openat(int64_t dfd, const char *filename, int64_t flags) {
+    ASSERT(dfd == AT_FDCWD);
+    // 找到空闲的文件描述符
+    uint64_t fd = MAX_FILE_NUMBER;
+    for (uint64_t i = 0; i < MAX_FILE_NUMBER; i++) {
+        if (current->files->fd_array[i].opened) {
+            continue;
+        } else {
+            fd = i;
+            break;
+        }
+    }
+    ASSERT(fd < MAX_FILE_NUMBER);
+
+    // init
+    int64_t ret = file_open(&current->files->fd_array[fd], filename, flags);
+    ASSERT(ret != -1);
+    return ret;
+}
+
+// 关闭文件
+int64_t sys_close(int64_t fd) {
+    ASSERT(fd >= 0 && fd < MAX_FILE_NUMBER);
+    current->files->fd_array[fd].opened = 0;
+    return 0; // 返回值没用上
+}
+
+
+
 void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
     // 通过 `scause` 判断 trap 类型
     // 如果是 interrupt 判断是否是 timer interrupt
@@ -80,6 +125,15 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
         } else if (regs->x[17] == SYS_READ) {
             LOG(GREEN "ecall: SYS_READ" CLEAR);
             regs->x[10] = sys_read(regs->x[10], (char *)regs->x[11], regs->x[12]);
+        } else if (regs->x[17] == SYS_OPENAT) {
+            LOG(GREEN "ecall: SYS_OPENAT" CLEAR);
+            regs->x[10] = sys_openat(regs->x[10], (const char *)regs->x[11], regs->x[12]);
+        } else if (regs->x[17] == SYS_CLOSE) {
+            LOG(GREEN "ecall: SYS_CLOSE" CLEAR);
+            regs->x[10] = sys_close(regs->x[10]);
+        } else if (regs->x[17] == SYS_LSEEK) {
+            LOG(GREEN "ecall: SYS_LSEEK" CLEAR);
+            regs->x[10] = sys_lseek(regs->x[10], regs->x[11], regs->x[12]);
         } else {
             printk("[U] Unhandled ecall: ecall_type=%016llX \n", regs->x[17]);
         }
