@@ -7,6 +7,7 @@
 #include "stdlib.h"
 #include "printk.h"
 #include "elf.h"
+#include "fs.h"
 
 extern void __dummy();
 extern void __ret_from_fork();
@@ -263,6 +264,8 @@ void task_init() {
         // sscratch 为用户态指针
         task[i]->thread.sp = (uint64_t)task[i] + PGSIZE;
         task[i]->thread.sscratch = USER_END;
+
+        task[i]->files = file_init();
     }
     printk("...task_init done!\n");
 }

@@ -47,6 +47,8 @@ struct task_struct {
     uint64_t *pgd;  // 用户态页表, lab4 独有
 
     struct mm_struct mm; // lab5 add
+    
+    struct files_struct *files; // lab6 add
 };
 
 /* 传入虚拟地址，查找 vma

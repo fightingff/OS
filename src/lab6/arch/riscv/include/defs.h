@@ -32,7 +32,7 @@
 #define VM_START (0xffffffe000000000)
 #define VM_SIZE (VM_END - VM_START)
 
-#define PA2VA_OFFSET (VM_START - PHY_START)
+#define PA2VA_OFFSET (VM_START - PHY_START) //0xffffffdf80000000
 #define VM_END (PHY_END + PA2VA_OFFSET)
 
 // lab4 add

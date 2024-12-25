@@ -8,8 +8,45 @@
 #include "clock.h"
 #include "proc.h"
 #include "syscall.h"
+#include "fs.h"
 
 extern struct task_struct *current;
+
+int64_t sys_write(uint64_t fd, const char *buf, uint64_t len) {
+    int64_t ret;
+    struct file *file = &(current->files->fd_array[fd]);
+    if (file->opened == 0) {
+        printk("file not opened\n");
+        return ERROR_FILE_NOT_OPEN;
+    } else {
+        // check perms and call write function of file
+        if (file->perms & FILE_WRITABLE) {
+            ret = file->write(file, buf, len);
+        } else {
+            printk("file not writable\n");
+            return ERROR_FILE_NOT_WRITABLE;
+        }
+    }
+    return ret;
+}
+
+int64_t sys_read(uint64_t fd, char *buf, uint64_t len) {
+    int64_t ret;
+    struct file *file = &(current->files->fd_array[fd]);
+    if (file->opened == 0) {
+        printk("file not opened\n");
+        return ERROR_FILE_NOT_OPEN;
+    } else {
+        // check perms and call read function of file
+        if (file->perms & FILE_READABLE) {
+            ret = file->read(file, buf, len);
+        } else {
+            printk("file not readable\n");
+            return ERROR_FILE_NOT_WRITABLE;
+        }
+    }
+    return ret;
+}
 
 void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
     // 通过 `scause` 判断 trap 类型
@@ -35,11 +72,14 @@ void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
             LOG(GREEN "ecall: SYS_GETPID, pid = %d" CLEAR, current->pid);
         } else if(regs->x[17] == SYS_WRITE) {
             LOG(GREEN "ecall: SYS_WRITE" CLEAR);
-            regs->x[10] = printk("%s", regs->x[11]);
+            regs->x[10] = sys_write(regs->x[10], (const char *)regs->x[11], regs->x[12]);
         } else if (regs->x[17] == SYS_CLONE) {
             LOG(GREEN "ecall: SYS_CLONE" CLEAR);
             regs->x[10] = do_fork(regs);
             LOG(GREEN "ecall: SYS_CLONE, child_pid = %llu\n" CLEAR, regs->x[10]);
+        } else if (regs->x[17] == SYS_READ) {
+            LOG(GREEN "ecall: SYS_READ" CLEAR);
+            regs->x[10] = sys_read(regs->x[10], (char *)regs->x[11], regs->x[12]);
         } else {
             printk("[U] Unhandled ecall: ecall_type=%016llX \n", regs->x[17]);
         }

@@ -3,6 +3,7 @@
 #include "string.h"
 #include "mm.h"
 #include "vm.h"
+#include "virtio.h"
 
 extern char _stext[], _etext[];
 extern char _srodata[], _erodata[];
@@ -78,6 +79,9 @@ void setup_vm_final() {
     memset(swapper_pg_dir, 0x0, PGSIZE);
 
     // No OpenSBI mapping required
+
+    // ? 添加对 VritIO 外设的映射
+    create_mapping(swapper_pg_dir, io_to_virt(VIRTIO_START), VIRTIO_START, VIRTIO_SIZE * VIRTIO_COUNT, 0b0111);
 
     // mapping kernel text X|-|R|V
     create_mapping(swapper_pg_dir, (uint64_t)_stext, (uint64_t)_stext - PA2VA_OFFSET, (uint64_t)_etext - (uint64_t)_stext, 0b1011);

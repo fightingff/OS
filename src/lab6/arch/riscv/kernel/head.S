@@ -6,6 +6,8 @@
     .extern setup_vm
     .extern setup_vm_final
     .extern early_pgtbl
+    .extern virtio_dev_init
+    .extern mbr_init
     .section .text.init
     .globl _start
 _start:
@@ -22,6 +24,8 @@ _start:
     call mm_init
     call setup_vm_final
     call task_init
+    call virtio_dev_init
+    call mbr_init
 
     la t0, _traps
     csrw stvec, t0  # set stvec = _traps

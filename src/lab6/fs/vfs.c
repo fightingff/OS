@@ -16,7 +16,14 @@ char uart_getchar() {
 }
 
 int64_t stdin_read(struct file *file, void *buf, uint64_t len) {
-    // todo: use uart_getchar() to get `len` chars
+    // DONE: use uart_getchar() to get `len` chars
+    char *buffer = (char *)buf;
+    uint64_t cnt = 0;
+    while(len--){
+        *buffer++ = uart_getchar();
+        cnt++;
+    }
+    return cnt;
 }
 
 int64_t stdout_write(struct file *file, const void *buf, uint64_t len) {
@@ -29,5 +36,6 @@ int64_t stdout_write(struct file *file, const void *buf, uint64_t len) {
 }
 
 int64_t stderr_write(struct file *file, const void *buf, uint64_t len) {
-    // todo
+    // todo ?
+    return stdout_write(file, buf, len);
 }
