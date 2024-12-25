@@ -35,18 +35,18 @@ all: clean
 
 # FAT32
 run: all
-    @echo Launch qemu...
-    @qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default \
-        -global virtio-mmio.force-legacy=false \
-        -drive file=disk.img,if=none,format=raw,id=hd0 \
-        -device virtio-blk-device,drive=hd0
+	@echo Launch qemu...
+	@qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default \
+		-global virtio-mmio.force-legacy=false \
+		-drive file=disk.img,if=none,format=raw,id=hd0 \
+		-device virtio-blk-device,drive=hd0
 
 debug: all
-    @echo Launch qemu for debug...
-    @qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default \
-        -global virtio-mmio.force-legacy=false \
-        -drive file=disk.img,if=none,format=raw,id=hd0 \
-        -device virtio-blk-device,drive=hd0 -S -s
+	@echo Launch qemu for debug...
+	@qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default \
+		-global virtio-mmio.force-legacy=false \
+		-drive file=disk.img,if=none,format=raw,id=hd0 \
+		-device virtio-blk-device,drive=hd0 -S -s
 
 clean:
 	${MAKE} -C lib clean
