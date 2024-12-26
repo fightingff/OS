@@ -84,8 +84,43 @@ uint64_t fat32_table_sector_of_cluster(uint32_t cluster) {
 }
 
 int64_t fat32_read(struct file* file, void* buf, uint64_t len) {
-    /* todo: read content to buf, and return read length */
-    return 0;
+    struct fat32_file *fat32_file = &file->fat32_file;
+    uint64_t bytes_read = 0;
+    uint8_t sector_buf[VIRTIO_BLK_SECTOR_SIZE];
+
+    while (len > 0) {
+        // 计算当前簇号和簇内偏移量
+        uint64_t cluster = fat32_file->cluster;
+        uint64_t cluster_offset = file->cfo % (fat32_volume.sec_per_cluster * VIRTIO_BLK_SECTOR_SIZE);
+
+        // 计算当前扇区号和扇区内偏移量
+        uint64_t sector = cluster_to_sector(cluster) + (cluster_offset / VIRTIO_BLK_SECTOR_SIZE);
+        uint64_t sector_offset = cluster_offset % VIRTIO_BLK_SECTOR_SIZE;
+
+        // 读取当前扇区
+        virtio_blk_read_sector(sector, sector_buf);
+
+        // 计算本次读取的字节数
+        uint64_t bytes_to_read = VIRTIO_BLK_SECTOR_SIZE - sector_offset;
+        if (bytes_to_read > len) {
+            bytes_to_read = len;
+        }
+
+        // 将数据复制到缓冲区
+        memcpy(buf + bytes_read, sector_buf + sector_offset, bytes_to_read);
+
+        // 更新偏移量和剩余长度
+        bytes_read += bytes_to_read;
+        file->cfo += bytes_to_read;
+        len -= bytes_to_read;
+
+        // 如果当前簇的数据已经读完，移动到下一个簇
+        if (file->cfo % (fat32_volume.sec_per_cluster * VIRTIO_BLK_SECTOR_SIZE) == 0) {
+            fat32_file->cluster = next_cluster(fat32_file->cluster);
+        }
+    }
+
+    return bytes_read;
 }
 
 int64_t fat32_write(struct file* file, const void* buf, uint64_t len) {
