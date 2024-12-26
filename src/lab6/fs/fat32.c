@@ -106,9 +106,7 @@ struct fat32_file fat32_open_file(const char *path) {
                 }
                 if (memcmp(entry->name, name, strlen(name)) == 0) {
                     file.cluster = (entry->starthi << 16) | entry->startlow;
-                    // file.dir.cluster = fat32_header.root_clus + dir_sec / fat32_volume.sec_per_cluster;
                     file.dir.cluster = cluster;
-                    // file.dir.index = i;
                     file.dir.index = FAT32_ENTRY_PER_SECTOR * k + i;
                     return file;
                 }
