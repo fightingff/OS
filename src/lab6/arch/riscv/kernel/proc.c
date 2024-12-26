@@ -273,12 +273,11 @@ void task_init() {
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
 
 void switch_to(struct task_struct *next) {
-    LOG(RED);
-    LOG("current->pid = %llu, next->pid = %llu\n", current->pid, next->pid);
+    LOG(RED "current->pid = %llu, next->pid = %llu\n" CLEAR, current->pid, next->pid);
     if(current->pid != next->pid) {
         struct task_struct *prev = current;
         current = next;
-        printk("\nswitch to [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", current->pid, current->priority, current->counter);
+        LOG("\nswitch to [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", current->pid, current->priority, current->counter);
         __switch_to(prev, next);
     }
 }
@@ -308,7 +307,6 @@ void schedule() {
     }
 
     if(next->counter == 0) {
-        printk("\n");
         for(uint64_t i = 1; i < nr_tasks; ++i) {
             task[i]->counter = task[i]->priority;
             LOG("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
