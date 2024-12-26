@@ -24,6 +24,8 @@ _start:
     call mm_init
     call setup_vm_final
     call task_init
+
+    # 初始化外设
     call virtio_dev_init
     call mbr_init
 

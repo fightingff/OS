@@ -19,7 +19,8 @@ uint32_t next_cluster(uint64_t cluster) {
     uint64_t fat_offset = cluster * 4;
     uint64_t fat_sector = fat32_volume.first_fat_sec + fat_offset / VIRTIO_BLK_SECTOR_SIZE;
     virtio_blk_read_sector(fat_sector, fat32_table_buf);
-    int index_in_sector = fat_offset % (VIRTIO_BLK_SECTOR_SIZE / sizeof(uint32_t));
+    // int index_in_sector = fat_offset % (VIRTIO_BLK_SECTOR_SIZE / sizeof(uint32_t));
+    int index_in_sector = fat_offset % VIRTIO_BLK_SECTOR_SIZE;
     return *(uint32_t *)(fat32_table_buf + index_in_sector);
 }
 
