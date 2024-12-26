@@ -69,5 +69,6 @@ int64_t fat32_write(struct file* file, const void* buf, uint64_t len);
 int64_t fat32_read(struct file* file, void* buf, uint64_t len);
 
 #define FAT32_ENTRY_PER_SECTOR (VIRTIO_BLK_SECTOR_SIZE / sizeof(struct fat32_dir_entry))
+#define CLUSTER_END 0x0FFFFFFF
 
 #endif

@@ -24,11 +24,17 @@ uint32_t next_cluster(uint64_t cluster) {
 }
 
 void fat32_init(uint64_t lba, uint64_t size) {
+    LOG("fat32_init: lba: %llu, size: %llu", lba, size);
     virtio_blk_read_sector(lba, (void*)&fat32_header);
-    fat32_volume.first_fat_sec = fat32_header.rsvd_sec_cnt; // reserved sectors 0~(rsvd_sec_cnt-1)
+    fat32_volume.first_fat_sec = lba + fat32_header.rsvd_sec_cnt; // reserved sectors 0~(rsvd_sec_cnt-1)
     fat32_volume.sec_per_cluster = fat32_header.sec_per_clus; // sectors per cluster
-    fat32_volume.first_data_sec = fat32_header.rsvd_sec_cnt + fat32_header.num_fats * fat32_header.fat_sz32; // first data sector
+    fat32_volume.first_data_sec = lba + fat32_header.rsvd_sec_cnt + fat32_header.num_fats * fat32_header.fat_sz32; // first data sector
     fat32_volume.fat_sz = fat32_header.fat_sz32; // fat size
+
+    LOG("first_fat_sec: %llu", fat32_volume.first_fat_sec);
+    LOG("sec_per_cluster: %u", fat32_volume.sec_per_cluster);
+    LOG("first_data_sec: %llu", fat32_volume.first_data_sec);
+    LOG("fat_sz: %u", fat32_volume.fat_sz);
 }
 
 int is_fat32(uint64_t lba) {
@@ -61,6 +67,52 @@ void to_upper_case(char *str) {     // util function to be used in fat32_open_fi
 struct fat32_file fat32_open_file(const char *path) {
     struct fat32_file file;
     /* todo: open the file according to path */
+    // 得到文件名位置
+    LOG("path: %s", path);
+    int i, t = -1;
+    do {
+        i += t + 1;
+        t = next_slash(path + i);
+    }while(~t);
+
+    LOG();
+    // 提取大写文件名
+    char name[strlen(path + i) + 2];
+    memcpy(name, path + i, strlen(path + i) + 1);
+    to_upper_case(name);
+    LOG("name: %s", name);
+
+    // 读取根目录
+    /**
+     * DIR_Name[0] = 0xE5 indicates the directory entry is free (available). 
+     * DIR_Name[0] = 0x00 also indicates the directory entry is free (available). However, DIR_Name[0] = 0x00 is an additional indicator that all directory entries following the current free entry are also free.
+     */
+    
+    uint32_t cluster = fat32_header.root_clus;
+    for (; cluster != CLUSTER_END; cluster = next_cluster(cluster)){
+        uint64_t dir_sec = cluster_to_sector(cluster); // 扇区号
+        for (int k = 0; k < fat32_volume.sec_per_cluster; k++, dir_sec++) {// 读取每个扇区
+            LOG("cluster: %u, dir_sec: %llu", cluster, dir_sec);
+            virtio_blk_read_sector(dir_sec, fat32_buf);
+            for (int i = 0; i < FAT32_ENTRY_PER_SECTOR; i++) {
+                struct fat32_dir_entry *entry = (struct fat32_dir_entry*)(fat32_buf + i * sizeof(struct fat32_dir_entry));
+                if (entry->name[0] == 0x00) { // all free
+                    break;
+                }
+                if (entry->name[0] == 0xe5) { // free
+                    continue;
+                }
+                if (memcmp(entry->name, name, strlen(name)) == 0) {
+                    file.cluster = (entry->starthi << 16) | entry->startlow;
+                    file.dir.cluster = fat32_header.root_clus + dir_sec / fat32_volume.sec_per_cluster;
+                    file.dir.index = i;
+                    return file;
+                }
+            }
+        }
+    }
+
+    file.cluster = CLUSTER_END;
     return file;
 }
 
