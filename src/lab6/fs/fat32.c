@@ -75,7 +75,7 @@ struct fat32_file fat32_open_file(const char *path) {
     do {
         i += t + 1;
         t = next_slash(path + i);
-    }while(~t);
+    } while(~t);
 
     LOG();
     // 提取大写文件名

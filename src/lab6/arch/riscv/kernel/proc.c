@@ -301,7 +301,7 @@ void schedule() {
 
     // LOG(RED);
     struct task_struct *next = idle;
-    for(int i = 1; i < nr_tasks; ++i) {
+    for(uint64_t i = 1; i < nr_tasks; ++i) {
         if(task[i]->counter > next->counter){
             next = task[i];
         }
@@ -309,9 +309,9 @@ void schedule() {
 
     if(next->counter == 0) {
         printk("\n");
-        for(int i = 1; i < nr_tasks; ++i) {
+        for(uint64_t i = 1; i < nr_tasks; ++i) {
             task[i]->counter = task[i]->priority;
-            printk("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
+            LOG("SET [PID = %lld PRIORITY = %lld COUNTER = %lld]\n", task[i]->pid, task[i]->priority, task[i]->counter);
         }
         schedule();
     } else {

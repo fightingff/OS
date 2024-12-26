@@ -91,8 +91,6 @@ int64_t sys_close(int64_t fd) {
     return 0; // 返回值没用上
 }
 
-
-
 void trap_handler(uint64_t scause, uint64_t sepc, struct pt_regs *regs) {
     // 通过 `scause` 判断 trap 类型
     // 如果是 interrupt 判断是否是 timer interrupt
