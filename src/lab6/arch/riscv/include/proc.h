@@ -46,9 +46,9 @@ struct task_struct {
     struct thread_struct thread;
     uint64_t *pgd;  // 用户态页表, lab4 独有
 
-    struct mm_struct mm; // lab5 add
+    struct mm_struct mm; // lab5 add: memory manager, 用于实现 demand paging
     
-    struct files_struct *files; // lab6 add
+    struct files_struct *files; // lab6 add: 维护该进程打开的文件列表
 };
 
 /* 传入虚拟地址，查找 vma

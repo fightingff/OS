@@ -5,6 +5,7 @@
 #include "printk.h"
 
 char uart_getchar() {
+    // 阻塞地读入一个字符
     char ret;
     while (1) {
         struct sbiret sbi_result = sbi_debug_console_read(1, ((uint64_t)&ret - PA2VA_OFFSET), 0);
@@ -19,7 +20,7 @@ int64_t stdin_read(struct file *file, void *buf, uint64_t len) {
     // DONE: use uart_getchar() to get `len` chars
     char *buffer = (char *)buf;
     uint64_t cnt = 0;
-    while(len--){
+    while(len--) {
         *buffer++ = uart_getchar();
         cnt++;
     }
